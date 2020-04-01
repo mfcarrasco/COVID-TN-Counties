@@ -1,0 +1,119 @@
+---
+title: "COVID-19 | Tennessee"
+output:
+    flexdashboard::flex_dashboard:
+      orientation: rows
+      vertical_layout: scroll
+---
+<style>                     
+.navbar {
+  background-color:#002D65;
+  border-color:#CC0000;
+}
+.navbar-brand {
+color:white!important;
+}
+</style>  
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(flexdashboard)
+library(readr)
+library(ggplot2)
+library(tidyverse)
+library(usmap)
+library(viridis)
+
+
+file_path = 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv'
+
+counties = read_csv(url(file_path))
+
+#Separate State
+tn = counties[ which(counties$state =='Tennessee'),]
+
+uscensus = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/county_pop_2019.csv'
+tn_pop = read_csv(url(uscensus))
+tn_pop = tn_pop[ which(tn_pop$State =='Tennessee'),]
+tn_pop = tn_pop[-1,c(2:3)]
+tn_pop = tn_pop %>% separate('County', c('County', 'drop'),fill='right', extra='merge')
+tn_pop$County = ifelse(tn_pop$County == 'Van',
+                       "Van Buren",
+                       tn_pop$County)
+tn_pop$Population = as.numeric(tn_pop$Population)
+tn_pop = tn_pop[, c('County', 'Population')]
+tn = left_join(tn, tn_pop, by=c('county' = 'County'))
+#Calculate per million
+tn['per_million'] = (tn$cases/tn$Population)*10^6
+
+#Top # counties in TN ####
+tn_top3 =c('Shelby', 'Davidson', 'Knox', 'Hamilton', 'Rutherford', 'Williamson')
+tn_top3 = tn[ tn$county %in% tn_top3,]
+
+tn3_ends = tn_top3 %>% group_by(county) %>% top_n(1,date) %>% pull(cases)
+```
+
+Row {data-width = 150}
+--------------------------------------
+
+### Date of Data Refresh
+```{r}
+dateRefresh = tn %>% top_n(1, date) %>% pull(date) %>% max() %>% format('%D')
+
+valueBox(value=dateRefresh, icon = 'fa-calendar-check', caption = 'Date of Data Refresh', color = '#00303c')
+```
+
+### Cases
+```{r}
+totalCases = tn %>% group_by(county) %>% top_n(1, date) %>% pull(cases) %>% sum() %>% formattable::comma(digits=0)
+
+valueBox(value=totalCases, icon='fa-user-plus', caption =  "Cases", color = '#CC0000')
+```
+
+### Deaths
+```{r}
+totalDeaths = tn %>% group_by(county) %>% top_n(1, date) %>% pull(deaths) %>% sum()
+
+valueBox(value= totalDeaths, caption = "Total Deaths",color = '#00303c')
+```
+
+
+Row {data-width = 650}
+------------------------------------------------------------
+
+### Most Populous Counties
+
+```{r, fig.width=6, fig.height=5}
+library(plotly)
+t3 =ggplot(data=tn_top3, aes(x=date, y=cases, color=county))+
+  geom_line(size=1, alpha=0.8)+
+  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
+  scale_y_continuous(sec.axis = sec_axis(~., breaks= tn3_ends))+
+  labs(x='', y='Cases')+
+  theme(legend.title = element_blank(), panel.background = element_blank(), axis.line.x=element_line(), axis.line.y.left = element_line(), axis.text=element_text(face='bold'),axis.text.x = element_text(angle=45, hjust=1))
+#t3
+
+ggplotly(t3)
+```
+
+
+Row {data-width = 650}
+-----------------------------------------------------------------------
+### Cases Standardized by Population
+
+```{r, fig.width=10, fig.height=5}
+tn_geo =tn %>% group_by(county) %>% top_n(1,date)
+tn_map = plot_usmap(include='TN', regions =  'counties', 
+           data=tn_geo, values='per_million')+
+  scale_fill_viridis(name='Cases per Million')+
+  theme(legend.position = 'right')
+
+tn_map
+```
+
+Row {data-width = 650}
+-----------------------------------------------------------------------
+
+Case counts based on NY Times GitHub Data  
+Population based on Census 2019 Estimates   
+Created by Malle Carrasco-Harris
