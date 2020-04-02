@@ -45,7 +45,17 @@ tn_daily = tn_daily[[1]]
 tn_daily$Positive= as.numeric(gsub(",", '', tn_daily$Positive)) #Remove commas; make numeric
 tn_daily$Negative= as.numeric(gsub(",", '', tn_daily$Negative)) 
 tn_daily[is.na(tn_daily)] = 0
+tn_daily = tn_daily %>% separate('County', c('County', 'drop'),fill='right', extra='merge')
+tn_daily$County = ifelse(tn_daily$County == 'Van',
+                       "Van Buren",
+                       tn_daily$County)
+tn_daily$County = ifelse(tn_daily$County == 'Out',
+                         "Out of TN",
+                         tn_daily$County)
 tn_daily$County = as.factor(tn_daily$County)
+
+
+
 
 #Merge NYT and Tn Daily dataframes####
 #Create a separate tn_daily that can fit into the format of tn
@@ -144,7 +154,9 @@ Row {data-width = 650}
 library(usmap)
 library(viridis)
 tn_geo =tn %>% group_by(county) %>% top_n(1,date)
-tn_geo = tn_geo[tn_geo$county !='Unknown',]
+tn_geo = tn_geo[!(tn_geo$county =='Unknown' | tn_geo$county =='Out of TN'|tn_geo$county =='Pending'),]
+
+
 tn_geo$fips =fips(state = 'TN', county=tn_geo$county) #get missing fips values for map
 
 plot_usmap(include='TN', regions =  'counties',
