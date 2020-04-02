@@ -21,22 +21,51 @@ color:white!important;
 </style>  
 
 ```{r setup, include=FALSE}
-library(dplyr)
 library(flexdashboard)
 library(readr)
 library(ggplot2)
 library(tidyverse)
-library(usmap)
-library(viridis)
 
+#Acquire Data####
+#Load NY Times Data###
+nyt_path = 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv'
 
-file_path = 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv'
-
-counties = read_csv(url(file_path))
+counties = read_csv(url(nyt_path)) #Originally contains all counties in US.
 
 #Separate State
 tn = counties[ which(counties$state =='Tennessee'),]
 
+#Scrape the daily data from the TN Health Department. 
+library(rvest)
+tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
+
+tn_daily = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[3]/div/div/div/div/div[3]/div/div/div/div/div[2]/div/div/div[1]/table') %>% html_table()
+
+tn_daily = tn_daily[[1]]
+tn_daily$Positive= as.numeric(gsub(",", '', tn_daily$Positive)) #Remove commas; make numeric
+tn_daily$Negative= as.numeric(gsub(",", '', tn_daily$Negative)) 
+tn_daily[is.na(tn_daily)] = 0
+tn_daily$County = as.factor(tn_daily$County)
+
+#Merge NYT and Tn Daily dataframes####
+#Create a separate tn_daily that can fit into the format of tn
+tn_daily2 = tn_daily[,c('County', 'Positive', 'Death')]
+names(tn_daily2) = c('county', 'cases', 'deaths')
+tn_daily2 = tn_daily2[!(tn_daily2$county=='Total' | tn_daily2$county =='Non-Tennessee Resident'),]
+tn_daily2 = tibble::add_column(tn_daily2, state = 'Tennessee', .after='county')
+
+fips_daily =tn %>% group_by(county, fips) %>% tally()
+
+tn_daily2 = left_join(tn_daily2, fips_daily[,1:2], by ='county')
+tn_daily2 = tibble::add_column(tn_daily2, date = as.Date(format(Sys.time(), '%Y-%m-%d')), .before='county')
+
+
+##Row bind tn_daily (TN Health Dept) with tn
+tn = rbind(tn, tn_daily2) #Rbind will automatically put the correct columns together. 
+
+
+#Add population ####
+#Get Population for counties in Tennessee
 uscensus = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/county_pop_2019.csv'
 tn_pop = read_csv(url(uscensus))
 tn_pop = tn_pop[ which(tn_pop$State =='Tennessee'),]
@@ -47,78 +76,139 @@ tn_pop$County = ifelse(tn_pop$County == 'Van',
                        tn_pop$County)
 tn_pop$Population = as.numeric(tn_pop$Population)
 tn_pop = tn_pop[, c('County', 'Population')]
-tn = left_join(tn, tn_pop, by=c('county' = 'County'))
+names(tn_pop) = c('county', 'population')
+#tn_pop[order(-tn_pop$population),]
+
+##Combine tn (NYT) dataframe with Population
+tn = left_join(tn, tn_pop, by='county')
+tn$county = as.factor(tn$county)
+
 #Calculate per million
-tn['per_million'] = (tn$cases/tn$Population)*10^6
+tn['cases_per_million'] = (tn$cases/tn$population)*10^6
 
-#Top # counties in TN ####
-tn_top3 =c('Shelby', 'Davidson', 'Knox', 'Hamilton', 'Rutherford', 'Williamson')
-tn_top3 = tn[ tn$county %in% tn_top3,]
 
-tn3_ends = tn_top3 %>% group_by(county) %>% top_n(1,date) %>% pull(cases)
+#Clean the global environment###
+rm(list=ls()[!ls() %in% c('tn', 'tn_daily', 'counties')])
 ```
 
-Row {data-width = 150}
---------------------------------------
+Rows {data-width = 150}
+-----------
+### Total Cases in TN
 
-### Date of Data Refresh
 ```{r}
-dateRefresh = tn %>% top_n(1, date) %>% pull(date) %>% max() %>% format('%D')
+total_cases = tn_daily[which(tn_daily$County =='Total'),'Positive'] %>% formattable::comma(digits=0)
 
-valueBox(value=dateRefresh, icon = 'fa-calendar-check', caption = 'Date of Data Refresh', color = '#00303c')
+valueBox(value = total_cases, icon='fa-user-plus', color='#002D65')
 ```
 
-### Cases
-```{r}
-totalCases = tn %>% group_by(county) %>% top_n(1, date) %>% pull(cases) %>% sum() %>% formattable::comma(digits=0)
+### Negative Tests 
 
-valueBox(value=totalCases, icon='fa-user-plus', caption =  "Cases", color = '#CC0000')
+```{r} 
+total_negatives = tn_daily[which(tn_daily$County =='Total'),'Negative'] %>% formattable::comma(digits=0)
+
+valueBox(value = total_negatives, icon='fa-user-minus', color='#CC0000')
 ```
 
-### Deaths
-```{r}
-totalDeaths = tn %>% group_by(county) %>% top_n(1, date) %>% pull(deaths) %>% sum()
+### Total Deaths
 
-valueBox(value= totalDeaths, caption = "Total Deaths",color = '#00303c')
+```{r} 
+total_death = tn_daily[which(tn_daily$County =='Total'),'Death'] %>% formattable::comma(digits=0)
+
+valueBox(value = total_death, color='#002D65')
 ```
 
-
-Row {data-width = 650}
-------------------------------------------------------------
-
-### Most Populous Counties
-
-```{r, fig.width=6, fig.height=5}
-library(plotly)
-t3 =ggplot(data=tn_top3, aes(x=date, y=cases, color=county))+
-  geom_line(size=1, alpha=0.8)+
-  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
-  scale_y_continuous(sec.axis = sec_axis(~., breaks= tn3_ends))+
-  labs(x='', y='Cases')+
-  theme(legend.title = element_blank(), panel.background = element_blank(), axis.line.x=element_line(), axis.line.y.left = element_line(), axis.text=element_text(face='bold'),axis.text.x = element_text(angle=45, hjust=1))
-#t3
-
-ggplotly(t3)
-```
-
-
-Row {data-width = 650}
+Column {data-width=650}
 -----------------------------------------------------------------------
-### Cases Standardized by Population
+
+### Cases across time in most populous counties
+
+```{r}
+library(plotly)
+tn_top =c('Shelby', 'Davidson', 'Knox', 'Hamilton', 'Rutherford', 'Williamson')
+tn_top = tn[ tn$county %in% tn_top,]
+
+
+t_line = tn_pop_line =ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
+  geom_line(size=1)+
+  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
+  labs(x='', y='Cases')+theme(legend.title = element_blank(), panel.background = element_blank(), axis.line.x=element_line(), axis.line.y.left = element_line(), axis.text=element_text(face='bold'),axis.text.x = element_text(angle=45, hjust=1))
+ggplotly(t_line)
+```
+
+Row {data-width = 650}
+-------------------------
+
+### Cases per million residents
 
 ```{r, fig.width=10, fig.height=5}
+library(usmap)
+library(viridis)
 tn_geo =tn %>% group_by(county) %>% top_n(1,date)
-tn_map = plot_usmap(include='TN', regions =  'counties', 
-           data=tn_geo, values='per_million')+
-  scale_fill_viridis(name='Cases per Million')+
-  theme(legend.position = 'right')
+tn_geo = tn_geo[tn_geo$county !='Unknown',]
+tn_geo$fips =fips(state = 'TN', county=tn_geo$county) #get missing fips values for map
 
-tn_map
+plot_usmap(include='TN', regions =  'counties',
+           data=tn_geo, values='cases_per_million')+
+  labs(title="COVID Cases per Million in Tennessee",
+       subtitle = "Based on NYTimes Github Data & \nCensus 2019 Estimates")+
+  scale_fill_viridis(name='Cases per million')+
+  theme(legend.position = 'right')+
+  labs(caption = format(Sys.time(), "%D"))
 ```
 
-Row {data-width = 650}
+Column {data-width=350, .tabset}
 -----------------------------------------------------------------------
 
-Case counts based on NY Times GitHub Data  
-Population based on Census 2019 Estimates   
-Created by Malle Carrasco-Harris
+### Positive cases by county
+
+```{r}
+tn_cases = tn_daily[which(tn_daily$Positive != 0 & tn_daily$County != 'Total'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
+
+plot_ly(data=tn_cases,
+        x=tn_cases$Positive,
+        y=reorder(tn_cases$County, tn_cases$Positive),
+        type='bar',
+        orientation='h', 
+        marker= list(color='red')) %>%
+  layout(xaxis = list(title= 'Count', 
+                      zeroline = FALSE, 
+                      showline = F, 
+                      showticklabels = T, 
+                      showgrid = T),
+         yaxis = list(showgrid = FALSE, 
+                      showline = FALSE, 
+                      showticklabels = TRUE))
+```
+
+### All Cases by County
+
+```{r}
+plot_ly(data=tn_cases,
+        x= reorder(tn_cases$County, tn_cases$Negative),
+        y=tn_cases$Negative,
+        type='bar',
+        name='Negative Cases',
+        marker= list(color='darkblue')) %>%
+          add_trace(y = tn_cases$Positive,
+                    name='Positive Cases',
+                    marker = list(color='yellow')) %>%
+          add_trace(y = tn_cases$Death,
+                    name='Deaths',
+                    marker = list(color='red')) %>%
+          layout(barmode = 'stack',
+                 xaxis = list(showgrid = FALSE, 
+                              showlilnee = FALSE, 
+                              showticklabels = TRUE),
+                 yaxis = list(title= 'Count', 
+                              zeroline = FALSE, 
+                              showline = F, 
+                              showticklabels = T, 
+                              showgrid = T),
+                 hovermode = 'compare')
+```
+
+Row{data-width = 650}
+-------
+This dashboard was created by [Malle Carrasco-Harris](https://www.linkedin.com/in/malle-carrasco-harr) using data from:  
+[TN Department of Health](https://www.tn.gov/health/cedep/ncov.html) — Updates daily at 2:00 PM CST  
+[NYT Coronavirus Data](https://github.com/nytimes/covid-19-data) — Last update:`r counties %>% top_n(1, date) %>% pull(date) %>%  max() %>% format('%D')`
