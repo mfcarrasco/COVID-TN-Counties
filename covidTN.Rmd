@@ -42,13 +42,14 @@ tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
 tn_daily = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[3]/div/div/div/div/div[3]/div/div/div/div/div[2]/div/div/div[1]/table') %>% html_table()
 
 tn_daily = tn_daily[[1]]
+names(tn_daily) = c('County', 'Positive', 'Negative', 'Death')
 tn_daily$Positive= as.numeric(gsub(",", '', tn_daily$Positive)) #Remove commas; make numeric
 tn_daily$Negative= as.numeric(gsub(",", '', tn_daily$Negative)) 
 tn_daily[is.na(tn_daily)] = 0
 tn_daily = tn_daily %>% separate('County', c('County', 'drop'),fill='right', extra='merge')
 tn_daily$County = ifelse(tn_daily$County == 'Van',
-                       "Van Buren",
-                       tn_daily$County)
+                         "Van Buren",
+                         tn_daily$County)
 tn_daily$County = ifelse(tn_daily$County == 'Out',
                          "Out of TN",
                          tn_daily$County)
@@ -61,7 +62,7 @@ tn_daily$County = as.factor(tn_daily$County)
 #Create a separate tn_daily that can fit into the format of tn
 tn_daily2 = tn_daily[,c('County', 'Positive', 'Death')]
 names(tn_daily2) = c('county', 'cases', 'deaths')
-tn_daily2 = tn_daily2[!(tn_daily2$county=='Total' | tn_daily2$county =='Non-Tennessee Resident'),]
+tn_daily2 = tn_daily2[!(tn_daily2$county=='TOTAL' | tn_daily2$county =='Non-Tennessee Resident'),]
 tn_daily2 = tibble::add_column(tn_daily2, state = 'Tennessee', .after='county')
 
 fips_daily =tn %>% group_by(county, fips) %>% tally()
@@ -106,7 +107,7 @@ Rows {data-width = 150}
 ### Total Cases in TN
 
 ```{r}
-total_cases = tn_daily[which(tn_daily$County =='Total'),'Positive'] %>% formattable::comma(digits=0)
+total_cases = tn_daily[which(tn_daily$County =='TOTAL'),'Positive'] %>% formattable::comma(digits=0)
 
 valueBox(value = total_cases, icon='fa-user-plus', color='#002D65')
 ```
@@ -114,7 +115,7 @@ valueBox(value = total_cases, icon='fa-user-plus', color='#002D65')
 ### Negative Tests 
 
 ```{r} 
-total_negatives = tn_daily[which(tn_daily$County =='Total'),'Negative'] %>% formattable::comma(digits=0)
+total_negatives = tn_daily[which(tn_daily$County =='TOTAL'),'Negative'] %>% formattable::comma(digits=0)
 
 valueBox(value = total_negatives, icon='fa-user-minus', color='#CC0000')
 ```
@@ -122,7 +123,7 @@ valueBox(value = total_negatives, icon='fa-user-minus', color='#CC0000')
 ### Total Deaths
 
 ```{r} 
-total_death = tn_daily[which(tn_daily$County =='Total'),'Death'] %>% formattable::comma(digits=0)
+total_death = tn_daily[which(tn_daily$County =='TOTAL'),'Death'] %>% formattable::comma(digits=0)
 
 valueBox(value = total_death, color='#002D65')
 ```
@@ -174,7 +175,7 @@ Column {data-width=350, .tabset}
 ### Positive cases by county
 
 ```{r}
-tn_cases = tn_daily[which(tn_daily$Positive != 0 & tn_daily$County != 'Total'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
+tn_cases = tn_daily[which(tn_daily$Positive != 0 & tn_daily$County != 'TOTAL'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
 
 plot_ly(data=tn_cases,
         x=tn_cases$Positive,
