@@ -227,6 +227,33 @@ plot_ly(data=tn_cases,
                  hovermode = 'compare')
 ```
 
+
+Column {data-width=350, data-height=350}
+---------------------------
+
+### Confirmed Cases by Age
+```{r}
+#Get TN Data
+tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
+
+tn_age = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[3]/div/div/div/div/div[2]/div/div[1]/table') %>% html_table()
+
+#Data Cleaning
+tn_age = tn_age[[1]]
+names(tn_age) = c('Age_Ranges', 'Count')
+tn_age = tn_age[which(tn_age$Age_Ranges != 'Pending' & tn_age$Age_Ranges != 'Total'),]
+tn_age$Age_Ranges = as.factor(tn_age$Age_Ranges)
+tn_age$Count = as.integer(tn_age$Count)
+
+#Plot
+ggplot(data=tn_age, aes(x=Age_Ranges, y=Count))+
+  geom_col(fill='#002D65')+
+  xlab('')+
+  theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold'))
+```
+
+
+
 Row{data-width = 650}
 -------
 This dashboard was created by [Malle Carrasco-Harris](https://www.linkedin.com/in/malle-carrasco-harr) using data from:  
