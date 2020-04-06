@@ -172,13 +172,13 @@ plot_usmap(include='TN', regions =  'counties',
   labs(caption = format(Sys.time(), "%D"))
 ```
 
-Column {data-width=350, .tabset}
+Column {data-width=350, data-height=950, .tabset}
 -----------------------------------------------------------------------
 
 ### Positive cases by county
 
 ```{r}
-tn_cases = tn_daily[which(tn_daily$Positive != 0 & tn_daily$County != 'Total'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
+tn_cases = tn_daily[which(tn_daily$Positive != 0 & tn_daily$County != 'Total' & tn_daily$County != 'Pending' & tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
 
 plot_ly(data=tn_cases,
         x=tn_cases$Positive,
@@ -193,7 +193,9 @@ plot_ly(data=tn_cases,
                       showgrid = T),
          yaxis = list(showgrid = FALSE, 
                       showline = FALSE, 
-                      showticklabels = TRUE))
+                      showticklabels = TRUE,
+                      dtick=1,
+                      tickfont = list(size=10)))
 ```
 
 ### All Cases by County
@@ -214,7 +216,9 @@ plot_ly(data=tn_cases,
           layout(barmode = 'stack',
                  xaxis = list(showgrid = FALSE, 
                               showlilnee = FALSE, 
-                              showticklabels = TRUE),
+                              showticklabels = TRUE,
+                              dtick=1,
+                              tickfont =list(size=10)),
                  yaxis = list(title= 'Count', 
                               zeroline = FALSE, 
                               showline = F, 
