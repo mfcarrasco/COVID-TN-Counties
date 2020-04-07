@@ -50,10 +50,10 @@ tn_daily = tn_daily %>% separate('County', c('County', 'drop'),fill='right', ext
 tn_daily$County = ifelse(tn_daily$County == 'Van',
                          "Van Buren",
                          tn_daily$County)
-tn_daily$County = ifelse(tn_daily$County == 'Out',
+tn_daily$County = ifelse(tn_daily$County == 'Out' |tn_daily$County == 'OUT',
                          "Out of TN",
                          tn_daily$County)
-tn_daily$County = ifelse(tn_daily$County == 'Grand',
+tn_daily$County = ifelse(tn_daily$County == 'Grand'| tn_daily$County == 'TOTAL',
                          "Total",
                          tn_daily$County)
 tn_daily$County = as.factor(tn_daily$County)
@@ -65,7 +65,7 @@ tn_daily$County = as.factor(tn_daily$County)
 #Create a separate tn_daily that can fit into the format of tn
 tn_daily2 = tn_daily[,c('County', 'Positive', 'Death')]
 names(tn_daily2) = c('county', 'cases', 'deaths')
-tn_daily2 = tn_daily2[!(tn_daily2$county=='Total' | tn_daily2$county =='Non-Tennessee Resident'),]
+tn_daily2 = tn_daily2[!(tn_daily2$county=='Total' | tn_daily2$county =='Out of TN'),]
 tn_daily2 = tibble::add_column(tn_daily2, state = 'Tennessee', .after='county')
 
 fips_daily =tn %>% group_by(county, fips) %>% tally()
@@ -158,7 +158,7 @@ Row {data-width = 650}
 library(usmap)
 library(viridis)
 tn_geo =tn %>% group_by(county) %>% top_n(1,date)
-tn_geo = tn_geo[!(tn_geo$county =='Unknown' | tn_geo$county =='Out of TN'|tn_geo$county =='Pending'),]
+tn_geo = tn_geo[!(tn_geo$county =='Unknown' | tn_geo$county =='Out of TN'|tn_geo$county =='Pending'|tn_geo$county =='PENDING'),]
 
 
 tn_geo$fips =fips(state = 'TN', county=tn_geo$county) #get missing fips values for map
@@ -178,7 +178,7 @@ Column {data-width=350, data-height=950, .tabset}
 ### Positive cases by county
 
 ```{r}
-tn_cases = tn_daily[which(tn_daily$Positive != 0 & tn_daily$County != 'Total' & tn_daily$County != 'Pending' & tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
+tn_cases = tn_daily[which(tn_daily$Positive != 0 & tn_daily$County != 'Total' & tn_daily$County != 'Pending' & tn_daily$County != 'PENDING' & tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
 
 plot_ly(data=tn_cases,
         x=tn_cases$Positive,
@@ -241,7 +241,7 @@ tn_age = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/
 #Data Cleaning
 tn_age = tn_age[[1]]
 names(tn_age) = c('Age_Ranges', 'Count')
-tn_age = tn_age[which(tn_age$Age_Ranges != 'Pending' & tn_age$Age_Ranges != 'Total'),]
+tn_age = tn_age[which(tn_age$Age_Ranges != 'Pending'& tn_age$Age_Ranges !='Pending' & tn_age$Age_Ranges != 'Total'),]
 tn_age$Age_Ranges = as.factor(tn_age$Age_Ranges)
 tn_age$Count = as.integer(tn_age$Count)
 
