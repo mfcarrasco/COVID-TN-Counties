@@ -4,6 +4,8 @@ output:
     flexdashboard::flex_dashboard:
       orientation: rows
       vertical_layout: scroll
+      social: menu
+      source_code: embed
 knit: (function(input_file, encoding) {
   out_dir <- 'docs';
   rmarkdown::render(input_file,
@@ -104,6 +106,9 @@ tn['cases_per_million'] = (tn$cases/tn$population)*10^6
 #Clean the global environment###
 rm(list=ls()[!ls() %in% c('tn', 'tn_daily', 'counties')])
 ```
+
+Data Visualizations
+=======================================
 
 Rows {data-width = 150}
 -----------
@@ -249,7 +254,8 @@ tn_age$Count = as.integer(tn_age$Count)
 ggplot(data=tn_age, aes(x=Age_Ranges, y=Count))+
   geom_col(fill='#002D65')+
   xlab('')+
-  theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold'))
+  theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold'))+
+  geom_text(aes(label =Count), vjust=-0.2)
 ```
 
 
@@ -258,4 +264,19 @@ Row{data-width = 650}
 -------
 This dashboard was created by [Malle Carrasco-Harris](https://www.linkedin.com/in/malle-carrasco-harr) using data from:  
 [TN Department of Health](https://www.tn.gov/health/cedep/ncov.html) — Updates daily at 2:00 PM CST  
-[NYT Coronavirus Data](https://github.com/nytimes/covid-19-data) — Last update:`r counties %>% top_n(1, date) %>% pull(date) %>%  max() %>% format('%D')`
+[NYT Coronavirus Data](https://github.com/nytimes/covid-19-data) — Last update: `r counties %>% top_n(1, date) %>% pull(date) %>%  max() %>% format('%D')`
+
+
+About 
+================================
+
+**The Tennessee Coronavirus Dashboard**  
+The sole intention of this Coronavirus dashboard is to provide a visual overview of the 2019 Novel COVID-19 as it relates to counties in Tennessee. The data is scraped from two different sources, and there are no guarantees on the accuracy of the data becaues of differences in numbers reported and reporting time. 
+
+**Data**
+
+Data for "Cases across time in most populous counties" is a concatenation of the [New York Times Coronavirus Data](https://github.com/nytimes/covid-19-data), which last updated at  `r counties %>% top_n(1, date) %>% pull(date) %>%  max() %>% format('%m-%d')`, and the [TN Department of Health](https://www.tn.gov/health/cedep/ncov.html), which updates daily at 2:00 PM CST.     
+
+All current (snapshot) data is from the [TN Department of Health](https://www.tn.gov/health/cedep/ncov.html) only.  
+
+One issue that arises from collecting data in this fashion are differences in the ways numbers are collected. The Tennessee department of health may be slightly behind other counties or report numbers differently. The most noticeable difference is a consistent 'downard' for the latest date in the "Cases across time" figure for Davidson County. The NYT acquires their county level data from the counties directly, and the [Nashville/Davidson County](https://www.asafenashville.org/updates/) updates are consistently greater than the TN department of health reports. This could be because the Davidson County data is not separated by in vs out of state patients and/or differences in "Total" vs "Active Cases".
