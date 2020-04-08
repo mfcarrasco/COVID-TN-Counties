@@ -27,7 +27,7 @@ library(flexdashboard)
 library(readr)
 library(ggplot2)
 library(tidyverse)
-
+library(dplyr)
 #Acquire Data####
 #Load NY Times Data###
 nyt_path = 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv'
@@ -41,7 +41,7 @@ tn = counties[ which(counties$state =='Tennessee'),]
 library(rvest)
 tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
 
-tn_daily = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[3]/div/div/div/div/div[3]/div/div/div/div/div[2]/div/div/div[1]/table') %>% html_table()
+tn_daily = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[4]/div/div/div/div/div/div/div[1]/div/div/div[2]/div/div/div/table') %>% html_table()
 
 tn_daily = tn_daily[[1]]
 names(tn_daily) = c('County', 'Positive', 'Negative', 'Death')
