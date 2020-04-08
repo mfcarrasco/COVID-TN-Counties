@@ -107,7 +107,7 @@ tn['cases_per_million'] = (tn$cases/tn$population)*10^6
 rm(list=ls()[!ls() %in% c('tn', 'tn_daily', 'counties')])
 ```
 
-Data Visualizations
+Data Visualizations by County
 =======================================
 
 Rows {data-width = 150}
@@ -232,8 +232,10 @@ plot_ly(data=tn_cases,
                  hovermode = 'compare')
 ```
 
+Data Visualizatons by Demographics
+==================================
 
-Column {data-width=350, data-height=350}
+Column {data-width=350, data-height=450}
 ---------------------------
 
 ### Confirmed Cases by Age
@@ -249,28 +251,124 @@ names(tn_age) = c('Age_Ranges', 'Count')
 tn_age = tn_age[which(tn_age$Age_Ranges != 'Pending'& tn_age$Age_Ranges !='Pending' & tn_age$Age_Ranges != 'Total'),]
 tn_age$Age_Ranges = as.factor(tn_age$Age_Ranges)
 tn_age$Count = as.integer(tn_age$Count)
-
+tn_age$Percent = round((tn_age$Count/sum(tn_age$Count))*100,1)
 #Plot
 ggplot(data=tn_age, aes(x=Age_Ranges, y=Count))+
   geom_col(fill='#002D65')+
   xlab('')+
-  theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold'))+
-  geom_text(aes(label =Count), vjust=-0.2)
+  theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12))+
+  geom_text(aes(label =paste(Percent, '%' )), vjust=-0.2)
+```
+
+### Confirmed Cases by Sex
+```{r}
+#Get TN Data
+tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
+
+tn_sex = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[3]/div/div/div/div/div[4]/div/div[2]/table') %>% html_table()
+
+#Data Cleaning
+tn_sex = tn_sex[[1]]
+names(tn_sex) = c('Sex', 'Count', 'Percent')
+tn_sex$Sex = as.factor(tn_sex$Sex)
+tn_sex$Count = as.numeric(gsub(',','',tn_sex$Count))
+
+#Plot
+ggplot(data=tn_sex, aes(x=Sex, y=Count))+
+  geom_col(fill='#CC0000', width=.5)+
+  xlab('')+
+  theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12))+
+  geom_text(aes(label =paste(Percent, '%' )), vjust=-0.2)
 ```
 
 
 
-Row{data-width = 650}
--------
-This dashboard was created by [Malle Carrasco-Harris](https://www.linkedin.com/in/malle-carrasco-harr) using data from:  
-[TN Department of Health](https://www.tn.gov/health/cedep/ncov.html) — Updates daily at 2:00 PM CST  
-[NYT Coronavirus Data](https://github.com/nytimes/covid-19-data) — Last update: `r counties %>% top_n(1, date) %>% pull(date) %>%  max() %>% format('%D')`
+Column {data-width=350, data-height=450}
+---------------------------
+
+### Confirmed Cases by Race
+```{r}
+#Get TN Data
+tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
+
+tn_race = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[3]/div/div/div/div/div[3]/div/div[1]/table') %>% html_table()
+
+#Data Cleaning
+tn_race = tn_race[[1]]
+names(tn_race) = c('Race', 'Count', 'Percent')
+tn_race$Race = as.factor(tn_race$Race)
+tn_race$Count = as.numeric(gsub(",", '', tn_race$Count))
+
+# #Plot
+# ggplot(data=tn_race, aes(x=reorder(Race, Count), y=Count))+
+#   geom_col(fill='#CC0000')+
+#   xlab('')+
+#   theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12), axis.text.x = element_text(angle=15, hjust=1, size=12))+
+#   geom_text(aes(label =paste(Percent,'%')), vjust=-0.2)
+
+
+#Donut chart
+tn_race$fraction = tn_race$Count/sum(tn_race$Count) #Compute percentages
+tn_race$ymax = cumsum(tn_race$fraction) #compute the cumulative percentages (top of each rectangle)
+tn_race$ymin = c(0, head(tn_race$ymax, n=-1)) #Compute the bottom of each rectangle
+tn_race$labelPosition = (tn_race$ymax + tn_race$ymin)/2 #Calculate label position
+tn_race$label = paste0(tn_race$Race, '\n Percent: ', tn_race$Percent)
+
+
+ggplot(tn_race, aes(ymax = ymax, ymin=ymin, xmax=4, xmin=3, fill=Race))+
+  geom_rect()+
+  coord_polar(theta = 'y')+
+  xlim(c(2,4))+
+  theme_void()+
+  scale_fill_brewer(palette = "Set1")
+```
+
+### Confirmed Cases by Ethnicity
+```{r}
+#Get TN Data
+tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
+
+tn_eth = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[3]/div/div/div/div/div[4]/div/div[1]/table') %>% html_table()
+
+#Data Cleaning
+tn_eth = tn_eth[[1]]
+names(tn_eth) = c('Ethnicity', 'Count', 'Percent')
+tn_eth$Ethnicity = as.factor(tn_eth$Ethnicity)
+tn_eth$Count = as.numeric(gsub(",", '', tn_eth$Count))
+
+# #Plot
+# ggplot(data=tn_eth, aes(x=reorder(Ethnicity, Count), y=Count))+
+#   geom_col(fill='#CC0000')+
+#   xlab('')+
+#   theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12), axis.text.x = element_text(angle=15, hjust=1, size=12))+
+#   geom_text(aes(label =paste(Percent,'%')), vjust=-0.2)
+
+tn_eth$fraction = tn_eth$Count/sum(tn_eth$Count) #Compute percentages
+tn_eth$ymax = cumsum(tn_eth$fraction) #compute the cumulative percentages (top of each rectangle)
+tn_eth$ymin = c(0, head(tn_eth$ymax, n=-1)) #Compute the bottom of each rectangle
+tn_eth$labelPosition = (tn_eth$ymax + tn_eth$ymin)/2 #Calculate label position
+tn_eth$label = paste0(tn_eth$Ethnicity, '\n Percent: ', tn_eth$Percent)
+
+
+ggplot(tn_eth, aes(ymax = ymax, ymin=ymin, xmax=4, xmin=3, fill=Ethnicity))+
+  geom_rect()+
+  coord_polar(theta = 'y')+
+  xlim(c(2,4))+
+  theme_void()+
+  scale_fill_brewer(palette = "Set1")
+```
+
+
+
+
+
 
 
 About 
 ================================
 
-**The Tennessee Coronavirus Dashboard**  
+**The Tennessee Coronavirus Dashboard**    
+  
 The sole intention of this Coronavirus dashboard is to provide a visual overview of the 2019 Novel COVID-19 as it relates to counties in Tennessee. The data is scraped from two different sources, and there are no guarantees on the accuracy of the data becaues of differences in numbers reported and reporting time. 
 
 **Data**
@@ -279,4 +377,6 @@ Data for "Cases across time in most populous counties" is a concatenation of the
 
 All current (snapshot) data is from the [TN Department of Health](https://www.tn.gov/health/cedep/ncov.html) only.  
 
-One issue that arises from collecting data in this fashion are differences in the ways numbers are collected. The Tennessee department of health may be slightly behind other counties or report numbers differently. The most noticeable difference is a consistent 'downard' for the latest date in the "Cases across time" figure for Davidson County. The NYT acquires their county level data from the counties directly, and the [Nashville/Davidson County](https://www.asafenashville.org/updates/) updates are consistently greater than the TN department of health reports. This could be because the Davidson County data is not separated by in vs out of state patients and/or differences in "Total" vs "Active Cases".
+One issue that arises from collecting data in this fashion are differences in the ways numbers are collected. The Tennessee department of health may be slightly behind other counties or report numbers differently. The most noticeable difference is a consistent 'downard' for the latest date in the "Cases across time" figure for Davidson County. The NYT acquires their county level data from the counties directly, and the [Nashville/Davidson County](https://www.asafenashville.org/updates/) updates are consistently greater than the TN department of health reports. This could be because the Davidson County data is not separated by in vs out of state patients and/or differences in "Total" vs "Active Cases".  
+
+Created by [Malle Carrasco-Harris](https://www.linkedin.com/in/malle-carrasco-harris).
