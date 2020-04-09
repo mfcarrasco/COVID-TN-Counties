@@ -247,17 +247,30 @@ tn_age = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/
 
 #Data Cleaning
 tn_age = tn_age[[1]]
-names(tn_age) = c('Age_Ranges', 'Count')
-tn_age = tn_age[which(tn_age$Age_Ranges != 'Pending'& tn_age$Age_Ranges !='Pending' & tn_age$Age_Ranges != 'Total'),]
+names(tn_age) = c('Age_Ranges', 'Count', 'Deaths')
+tn_age = tn_age[which(
+  tn_age$Age_Ranges != grep('p', tn_age$Age_Ranges,ignore.case=TRUE, value= TRUE)),]
 tn_age$Age_Ranges = as.factor(tn_age$Age_Ranges)
 tn_age$Count = as.integer(tn_age$Count)
 tn_age$Percent = round((tn_age$Count/sum(tn_age$Count))*100,1)
+
 #Plot
-ggplot(data=tn_age, aes(x=Age_Ranges, y=Count))+
-  geom_col(fill='#002D65')+
+fills = c('Count' = '#002D65', 'Deaths' = '#CC0000')
+ggplot(data=tn_age, aes(x=Age_Ranges))+
+  geom_col(aes(y=Count, fill='Count'))+
+  geom_col(aes(y=Deaths,fill='Deaths'))+
   xlab('')+
-  theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12))+
-  geom_text(aes(label =paste(Percent, '%' )), vjust=-0.2)
+  theme(panel.background = element_blank(), 
+        axis.line = element_line(), 
+        axis.text = element_text(face = 'bold'),
+        axis.text.x = element_text(angle=30),
+        legend.title = element_blank()
+        )+
+  geom_text(aes(y=Count,label =paste(Percent, '%' )), vjust=-0.2)+
+  geom_text(aes(y=Deaths,label =paste(Deaths)), vjust=-0.2, color='white')+
+  scale_fill_manual(values=fills)
+
+  
 ```
 
 ### Confirmed Cases by Sex
