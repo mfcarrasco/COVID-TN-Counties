@@ -36,48 +36,33 @@ counties = read_csv(url(nyt_path)) #Originally contains all counties in US.
 
 #Separate State
 tn = counties[ which(counties$state =='Tennessee'),]
+tn = tn[which(tn$date < '2020-03-31'),] #The Tennessee data from the new source has data starting March 31
 
-#Scrape the daily data from the TN Health Department. 
-library(rvest)
-tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
+#Tennessee data from online
+tn_daily = read_csv('TN_County_Daily.csv')
 
-tn_daily = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[4]/div/div/div/div/div/div/div[1]/div/div/div[2]/div/div/div/table') %>% html_table()
+names(tn_daily) = c('Date', 'County', 'Positive', 'Negative', 'Death')
 
-tn_daily = tn_daily[[1]]
-names(tn_daily) = c('County', 'Positive', 'Negative', 'Death')
-tn_daily$Positive= as.numeric(gsub(",", '', tn_daily$Positive)) #Remove commas; make numeric
-tn_daily$Negative= as.numeric(gsub(",", '', tn_daily$Negative)) 
-tn_daily[is.na(tn_daily)] = 0
-tn_daily$County = gsub(' County', '', tn_daily$County)
-tn_daily$County = ifelse(tn_daily$County == grep('Out', tn_daily$County,ignore.case=TRUE, value= TRUE),
-                         "Out of TN",
-                         tn_daily$County)
+tn_daily$County = ifelse(tn_daily$County == 'Non-Tennessee Resident',
+                          "Out of TN",
+                          tn_daily$County)
 
-tn_daily$County = ifelse(tn_daily$County == grep('total', tn_daily$County,ignore.case=TRUE, value= TRUE),
-                         "Total",
-                         tn_daily$County)
 tn_daily$County = ifelse(tn_daily$County == grep('pending', tn_daily$County,ignore.case=TRUE, value= TRUE),
                          "Pending",
                          tn_daily$County)
-
 tn_daily$County = as.factor(tn_daily$County)
-
-
+tn_daily$Date = as.Date(tn_daily$Date, format = '%m/%d/%y')
 
 
 #Merge NYT and Tn Daily dataframes####
-#Create a separate tn_daily that can fit into the format of tn
-tn_daily2 = tn_daily[,c('County', 'Positive', 'Death')]
-names(tn_daily2) = c('county', 'cases', 'deaths')
-tn_daily2 = tn_daily2[!(tn_daily2$county=='Total' | tn_daily2$county =='Out of TN' | tn_daily2$county =='Pending'),]
+tn_daily2 = tn_daily[,c('Date','County', 'Positive', 'Death')]
+names(tn_daily2) = c('date','county', 'cases', 'deaths')
+tn_daily2 = tn_daily2[!(tn_daily2$county =='Out of TN' | tn_daily2$county =='Pending'),]
 tn_daily2 = tibble::add_column(tn_daily2, state = 'Tennessee', .after='county')
 
 fips_daily =tn %>% group_by(county, fips) %>% tally()
 
 tn_daily2 = left_join(tn_daily2, fips_daily[,1:2], by ='county')
-tn_daily2 = tibble::add_column(tn_daily2, date = as.Date(format(Sys.time(), '%Y-%m-%d')), .before='county')
-
-
 ##Row bind tn_daily (TN Health Dept) with tn
 tn = rbind(tn, tn_daily2) #Rbind will automatically put the correct columns together. 
 
@@ -103,7 +88,7 @@ tn['cases_per_million'] = (tn$cases/tn$population)*10^6
 
 
 #Clean the global environment###
-rm(list=ls()[!ls() %in% c('tn', 'tn_daily', 'counties')])
+rm(list=ls()[!ls() %in% c('tn', 'tn_daily')])
 ```
 
 Data Visualizations by County
@@ -114,13 +99,16 @@ Rows {data-width = 150}
 ### Total Cases in TN
 
 ```{r}
-tn_daily$Case_Per = round((tn_daily$Positive/(tn_daily$Positive+tn_daily$Negative+tn_daily$Death))*100,1) 
-tn_daily$Negative_Per = round((tn_daily$Negative/(tn_daily$Positive+tn_daily$Negative+tn_daily$Death))*100,1) 
-tn_daily$Deaths_Per = round((tn_daily$Death/(tn_daily$Positive+tn_daily$Negative+tn_daily$Death))*100,1) 
+tn_daily = tn_daily %>% group_by(County) %>% top_n(1,Date)
+total_cases = sum(tn_daily$Positive)
+total_negative = sum(tn_daily$Negative)
+total_death = sum(tn_daily$Death)
 
-total_cases = tn_daily[which(tn_daily$County =='Total'),'Positive'] %>% formattable::comma(digits=0)
-per_total_cases = tn_daily[which(tn_daily$County =='Total'),'Case_Per'] %>% paste0('%')
-total_cases = paste0(total_cases, ' (',per_total_cases,')')  
+total = sum(total_cases, total_negative, total_death)
+
+#Total Positive Cases
+cases_per = ((total_cases/total)*100) %>% round(1) %>% paste0('%')
+total_cases = total_cases %>% formattable::comma(digits=0) %>% paste0(' (',cases_per,')')
 
 valueBox(value = total_cases, icon='fa-user-plus', color='#002D65')
 ```
@@ -128,18 +116,18 @@ valueBox(value = total_cases, icon='fa-user-plus', color='#002D65')
 ### Negative Tests 
 
 ```{r} 
-total_negatives = tn_daily[which(tn_daily$County =='Total'),'Negative'] %>% formattable::comma(digits=0)
-per_total_neg = tn_daily[which(tn_daily$County =='Total'),'Negative_Per'] %>% paste0('%')
-total_negatives = paste0(total_negatives, ' (', per_total_neg, ')')
-valueBox(value = total_negatives, icon='fa-user-minus', color='#CC0000')
+#Total Negative Cases
+negative_per = ((total_negative/total)*100) %>% round(1) %>% paste0('%')
+total_negative = total_negative %>% formattable::comma(digits=0) %>% paste0(' (', negative_per,')') 
+valueBox(value = total_negative, icon='fa-user-minus', color='#CC0000')
 ```
 
 ### Total Deaths
 
 ```{r} 
-total_death = tn_daily[which(tn_daily$County =='Total'),'Death'] %>% formattable::comma(digits=0)
-per_total_death = tn_daily[which(tn_daily$County =='Total'),'Deaths_Per'] %>% paste0('%')
-total_death = paste0(total_death, ' (', per_total_death, ')')
+#Total Deaths Cases
+death_per = ((total_death/total)*100) %>% round(1) %>% paste0('%')
+total_death = total_death %>% formattable::comma(digits=0) %>% paste0(' (',death_per,')')  
 valueBox(value = total_death, color='#002D65')
 ```
 
@@ -211,7 +199,6 @@ Column {data-width=350, data-height=950}
 
 ```{r}
 tn_cases = tn_daily[which(tn_daily$Positive != 0 & 
-                            tn_daily$County != 'Total' & 
                             tn_daily$County != 'Pending'  &
                             tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
 
@@ -237,7 +224,6 @@ plot_ly(data=tn_cases,
 
 ```{r}
 tn_cases = tn_daily[which(tn_daily$Positive > 20 & 
-                            tn_daily$County != 'Total' & 
                             tn_daily$County != 'Pending'  &
                             tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
 
@@ -261,7 +247,6 @@ Column {data-height=650}
 
 ```{r}
 tn_cases = tn_daily[which(tn_daily$Positive != 0 & 
-                            tn_daily$County != 'Total' & 
                             tn_daily$County != 'Pending'  &
                             tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
 
@@ -296,7 +281,6 @@ plot_ly(data=tn_cases,
 ```{r}
 library(plotly)
 tn_cases = tn_daily[which(tn_daily$Positive > 50 & 
-                            tn_daily$County != 'Total' & 
                             tn_daily$County != 'Pending'  &
                             tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] 
 
@@ -327,149 +311,6 @@ plot_ly(data=tn_cases,
          hovermode = 'compare')
 ```
 
-Data Visualizatons by Demographics
-==================================
-
-Column {data-width=350, data-height=450}
----------------------------
-
-### Confirmed Cases by Age
-```{r}
-#Get TN Data
-tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
-
-tn_age = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[3]/div/div/div/div/div[2]/div/div[1]/table') %>% html_table()
-
-#Data Cleaning
-tn_age = tn_age[[1]]
-names(tn_age) = c('Age_Ranges', 'Count', 'Deaths')
-tn_age = tn_age[which(
-  tn_age$Age_Ranges != grep('p', tn_age$Age_Ranges,ignore.case=TRUE, value= TRUE)),]
-tn_age$Age_Ranges = as.factor(tn_age$Age_Ranges)
-tn_age$Count = as.integer(tn_age$Count)
-tn_age$Percent = round((tn_age$Count/sum(tn_age$Count))*100,1)
-
-#Plot
-fills = c('Count' = '#002D65', 'Deaths' = '#CC0000')
-ggplot(data=tn_age, aes(x=Age_Ranges))+
-  geom_col(aes(y=Count, fill='Count'))+
-  geom_col(aes(y=Deaths,fill='Deaths'))+
-  xlab('')+
-  theme(panel.background = element_blank(), 
-        axis.line = element_line(), 
-        axis.text = element_text(face = 'bold'),
-        axis.text.x = element_text(angle=30),
-        legend.title = element_blank()
-        )+
-  geom_text(aes(y=Count,label =paste0(Percent, '%' )), vjust=-0.2)+
-  geom_text(aes(y=Deaths,label =paste(Deaths)), vjust=-0.2, color='white')+
-  scale_fill_manual(values=fills)
-
-  
-```
-
-### Confirmed Cases by Sex
-```{r}
-#Get TN Data
-tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
-
-tn_sex = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[3]/div/div/div/div/div[4]/div/div[2]/table') %>% html_table()
-
-#Data Cleaning
-tn_sex = tn_sex[[1]]
-names(tn_sex) = c('Sex', 'Count', 'Percent')
-tn_sex$Sex = as.factor(tn_sex$Sex)
-tn_sex$Count = as.numeric(gsub(',','',tn_sex$Count))
-
-#Plot
-ggplot(data=tn_sex, aes(x=Sex, y=Count))+
-  geom_col(fill='#CC0000', width=.5)+
-  xlab('')+
-  theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12))+
-  geom_text(aes(label =paste0(Percent, '%' )), vjust=-0.2)
-```
-
-
-
-Column {data-width=350, data-height=450}
----------------------------
-
-### Confirmed Cases by Race
-```{r}
-#Get TN Data
-tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
-
-tn_race = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[3]/div/div/div/div/div[3]/div/div[1]/table') %>% html_table()
-
-#Data Cleaning
-tn_race = tn_race[[1]]
-names(tn_race) = c('Race', 'Count', 'Percent')
-tn_race$Race = as.factor(tn_race$Race)
-tn_race$Count = as.numeric(gsub(",", '', tn_race$Count))
-
-# #Plot
-# ggplot(data=tn_race, aes(x=reorder(Race, Count), y=Count))+
-#   geom_col(fill='#CC0000')+
-#   xlab('')+
-#   theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12), axis.text.x = element_text(angle=15, hjust=1, size=12))+
-#   geom_text(aes(label =paste0(Percent,'%')), vjust=-0.2)
-
-
-#Donut chart
-tn_race$fraction = tn_race$Count/sum(tn_race$Count) #Compute percentages
-tn_race$ymax = cumsum(tn_race$fraction) #compute the cumulative percentages (top of each rectangle)
-tn_race$ymin = c(0, head(tn_race$ymax, n=-1)) #Compute the bottom of each rectangle
-tn_race$labelPosition = (tn_race$ymax + tn_race$ymin)/2 #Calculate label position
-tn_race$label = paste0(tn_race$Race, '\n Percent: ', tn_race$Percent)
-
-
-ggplot(tn_race, aes(ymax = ymax, ymin=ymin, xmax=4, xmin=3, fill=Race))+
-  geom_rect()+
-  coord_polar(theta = 'y')+
-  xlim(c(2,4))+
-  theme_void()+
-  scale_fill_brewer(palette = "Set1")
-```
-
-### Confirmed Cases by Ethnicity
-```{r}
-#Get TN Data
-tn_path = 'https://www.tn.gov/health/cedep/ncov.html'
-
-tn_eth = tn_path %>% read_html() %>% html_nodes(xpath='/html/body/div[2]/div[2]/div[2]/div/div/div[3]/div/div/div/div/div[4]/div/div[1]/table') %>% html_table()
-
-#Data Cleaning
-tn_eth = tn_eth[[1]]
-names(tn_eth) = c('Ethnicity', 'Count', 'Percent')
-tn_eth$Ethnicity = as.factor(tn_eth$Ethnicity)
-tn_eth$Count = as.numeric(gsub(",", '', tn_eth$Count))
-
-# #Plot
-# ggplot(data=tn_eth, aes(x=reorder(Ethnicity, Count), y=Count))+
-#   geom_col(fill='#CC0000')+
-#   xlab('')+
-#   theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12), axis.text.x = element_text(angle=15, hjust=1, size=12))+
-#   geom_text(aes(label =paste0(Percent,'%')), vjust=-0.2)
-
-tn_eth$fraction = tn_eth$Count/sum(tn_eth$Count) #Compute percentages
-tn_eth$ymax = cumsum(tn_eth$fraction) #compute the cumulative percentages (top of each rectangle)
-tn_eth$ymin = c(0, head(tn_eth$ymax, n=-1)) #Compute the bottom of each rectangle
-tn_eth$labelPosition = (tn_eth$ymax + tn_eth$ymin)/2 #Calculate label position
-tn_eth$label = paste0(tn_eth$Ethnicity, '\n Percent: ', tn_eth$Percent)
-
-
-ggplot(tn_eth, aes(ymax = ymax, ymin=ymin, xmax=4, xmin=3, fill=Ethnicity))+
-  geom_rect()+
-  coord_polar(theta = 'y')+
-  xlim(c(2,4))+
-  theme_void()+
-  scale_fill_brewer(palette = "Set1")
-```
-
-
-
-
-
 
 
 About 
@@ -477,17 +318,15 @@ About
 
 **The Tennessee Coronavirus Dashboard**    
   
-The sole intention of this Coronavirus dashboard is to provide a visual overview of the 2019 Novel COVID-19 as it relates to counties in Tennessee. The data is scraped from two different sources, and there are no guarantees on the accuracy of the data becaues of differences in numbers reported and reporting time.   
+The sole intention of this Coronavirus dashboard is to provide a visual overview of the 2019 Novel COVID-19 as it relates to counties in Tennessee. The data is acquired from two different sources, and there are no guarantees on the accuracy of the data becaues of differences in numbers reported and reporting time.   
 
 Note: This dashboard has different graphs for small screens. For more interactive graphs, please view this website on a large screen (computer/large table).   
 
 
 **Data**
 
-Data for "Cases across time in most populous counties" is a concatenation of the [New York Times Coronavirus Data](https://github.com/nytimes/covid-19-data), which last updated at  `r counties %>% top_n(1, date) %>% pull(date) %>%  max() %>% format('%m-%d')`, and the [TN Department of Health](https://www.tn.gov/health/cedep/ncov.html), which updates daily at 2:00 PM CST.     
+Data for "Cases across time in most populous counties" is a concatenation of the [New York Times Coronavirus Data](https://github.com/nytimes/covid-19-data) and the [Tennessee State Data Center](https://myutk.maps.arcgis.com/home/group.html?id=c98fc99308dd43fb98146d3cf21fc31c&q=tags%3A%22COVID-19%22&view=list&focus=files#content), which acquires its data from the [TN Department of Health](https://www.tn.gov/health/cedep/ncov.html)
 
-All current (snapshot) data is from the [TN Department of Health](https://www.tn.gov/health/cedep/ncov.html) only.  
-
-One issue that arises from collecting data in this fashion are differences in the ways numbers are collected. The Tennessee department of health may be slightly behind other counties or report numbers differently. The most noticeable difference is a consistent 'downard' for the latest date in the "Cases across time" figure for Davidson County. The NYT acquires their county level data from the counties directly, and the [Nashville/Davidson County](https://www.asafenashville.org/updates/) updates are consistently greater than the TN department of health reports. This could be because the Davidson County data is not separated by in vs out of state patients and/or differences in "Total" vs "Active Cases".  
+Latest data from `r max(tn$date) %>% format('%m-%d')`.
 
 Created by [Malle Carrasco-Harris](https://www.linkedin.com/in/malle-carrasco-harris).  
