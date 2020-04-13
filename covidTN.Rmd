@@ -39,19 +39,36 @@ tn = counties[ which(counties$state =='Tennessee'),]
 tn = tn[which(tn$date < '2020-03-31'),] #The Tennessee data from the new source has data starting March 31
 
 #Tennessee data from online
-tn_daily = read_csv('TN_County_Daily.csv')
+tn_state = 'https://myutk.maps.arcgis.com/sharing/rest/content/items/32b104abc5d841ca895de7f7c17fc4dc/data'
+
+download.file(tn_state,'TN_COVID19_CountyDaily.xlsx') 
+
+tn_daily =  readxl::read_excel('TN_COVID19_CountyDaily.xlsx',sheet=1) %>%
+  filter(DATE > '2020-03-30') %>%
+  select(DATE, COUNTY, TEST_POS, TEST_NEG, DEATHS_TOT) %>%
+  filter(COUNTY != 'Balance') 
 
 names(tn_daily) = c('Date', 'County', 'Positive', 'Negative', 'Death')
 
 tn_daily$County = ifelse(tn_daily$County == 'Non-Tennessee Resident',
-                          "Out of TN",
-                          tn_daily$County)
-
-tn_daily$County = ifelse(tn_daily$County == grep('pending', tn_daily$County,ignore.case=TRUE, value= TRUE),
-                         "Pending",
+                         "Out of TN",
                          tn_daily$County)
+
+tn_daily$County =ifelse(tn_daily$County == 'Dekalb', 
+                        'DeKalb', 
+                        tn_daily$County)
+
+tn_daily$County =ifelse(tn_daily$County == 'VanBuren', 
+                        'Van Buren', 
+                        tn_daily$County)
+
+tn_daily$County = sub('ﬀ', "ff", tn_daily$County) #Coffee and Jefferson have some weird issues.
+
+#Check counties
+#levels(as.factor(tn_daily$County))
+
 tn_daily$County = as.factor(tn_daily$County)
-tn_daily$Date = as.Date(tn_daily$Date, format = '%m/%d/%y')
+#tn_daily$Date = as.Date(tn_daily$Date, format = '%m/%d/%y')
 
 
 #Merge NYT and Tn Daily dataframes####
@@ -310,6 +327,143 @@ plot_ly(data=tn_cases,
                       showgrid = T),
          hovermode = 'compare')
 ```
+
+Data Visualizatons by Demographics
+==================================
+
+Column {data-width=350, data-height=450}
+---------------------------
+
+### Confirmed Cases by Age
+```{r}
+#Get TN Data
+tn_age = 'https://myutk.maps.arcgis.com/sharing/rest/content/items/1bdfe86c38514c9c878241d5230d9a85/data'
+
+download.file(tn_age,'TN_Age.xlsx') 
+
+tn_age =  readxl::read_excel('TN_Age.xlsx',sheet=1) %>% 
+  top_n(1,DATE) %>%
+  select(DATE, AGE, TOT_CASE_COUNT, DEATHS_TOT) %>%
+  filter(AGE != 'Pending')
+
+
+names(tn_age) = c('Date', 'Age_Ranges', 'Count',  'Deaths')
+
+tn_age$Age_Ranges = as.factor(tn_age$Age_Ranges)
+tn_age$Percent = round((tn_age$Count/sum(tn_age$Count))*100,1)
+
+#Plot
+fills = c('Count' = '#002D65', 'Deaths' = '#CC0000')
+ggplot(data=tn_age, aes(x=Age_Ranges))+
+  geom_col(aes(y=Count, fill='Count'))+
+  geom_col(aes(y=Deaths,fill='Deaths'))+
+  xlab('')+
+  theme(panel.background = element_blank(), 
+        axis.line = element_line(), 
+        axis.text = element_text(face = 'bold'),
+        axis.text.x = element_text(angle=30),
+        legend.title = element_blank()
+  )+
+  geom_text(aes(y=Count,label =paste0(Percent, '%' )), vjust=-0.2, size =3)+
+  geom_text(aes(y=Deaths,label =paste(Deaths)), vjust=-0.2, color='white', size = 3)+
+  scale_fill_manual(values=fills)
+  
+```
+
+### Confirmed Cases by Sex
+```{r}
+tn_demo = 'https://myutk.maps.arcgis.com/sharing/rest/content/items/4ff6b762d64a4e0caa626df00a76c902/data'
+
+download.file(tn_demo,'TN_Demographics.xlsx') 
+
+tn_demo =  readxl::read_excel('TN_Demographics.xlsx',sheet=1) %>% 
+  top_n(1,DATE) %>%
+  select(DATE, TYPE, DETAIL, TOT_CASE_COUNT) %>%
+  group_split(TYPE)
+
+tn_sex = tn_demo[[2]] %>% 
+  select(DETAIL, TOT_CASE_COUNT)
+
+names(tn_sex) = c('Sex', 'Count')
+tn_sex$Percent = round((tn_sex$Count/sum(tn_sex$Count))*100,1)
+
+
+ggplot(data=tn_sex, aes(x=Sex, y=Count))+
+  geom_col(fill='#CC0000', width=.5)+
+  xlab('')+
+  theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12))+
+  geom_text(aes(label =paste0(Percent, '%' )), vjust=-0.2)
+```
+
+
+
+Column {data-width=350, data-height=450}
+---------------------------
+
+### Confirmed Cases by Race
+```{r}
+#Get TN Data
+tn_race = tn_demo[[3]] %>% 
+  select(DETAIL, TOT_CASE_COUNT)
+
+names(tn_race) = c('Race', 'Count')
+tn_race$Percent = round((tn_race$Count/sum(tn_race$Count))*100,1)
+
+# #Plot
+# ggplot(data=tn_race, aes(x=reorder(Race, Count), y=Count))+
+#   geom_col(fill='#CC0000')+
+#   xlab('')+
+#   theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12), axis.text.x = element_text(angle=15, hjust=1, size=12))+
+#   geom_text(aes(label =paste0(Percent,'%')), vjust=-0.2)
+
+
+#Donut chart
+tn_race$fraction = tn_race$Count/sum(tn_race$Count) #Compute percentages
+tn_race$ymax = cumsum(tn_race$fraction) #compute the cumulative percentages (top of each rectangle)
+tn_race$ymin = c(0, head(tn_race$ymax, n=-1)) #Compute the bottom of each rectangle
+tn_race$labelPosition = (tn_race$ymax + tn_race$ymin)/2 #Calculate label position
+tn_race$label = paste0(tn_race$Race, '\n Percent: ', tn_race$Percent)
+
+
+ggplot(tn_race, aes(ymax = ymax, ymin=ymin, xmax=4, xmin=3, fill=Race))+
+  geom_rect()+
+  coord_polar(theta = 'y')+
+  xlim(c(2,4))+
+  theme_void()+
+  scale_fill_brewer(palette = "Set1")
+```
+
+### Confirmed Cases by Ethnicity
+```{r}
+tn_eth = tn_demo[[1]] %>% 
+  select(DETAIL, TOT_CASE_COUNT)
+
+names(tn_eth) = c('Ethnicity', 'Count')
+tn_eth$Percent = tn_eth$Count/sum(tn_eth$Count)*100
+
+# #Plot
+# ggplot(data=tn_eth, aes(x=reorder(Ethnicity, Count), y=Count))+
+#   geom_col(fill='#CC0000')+
+#   xlab('')+
+#   theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12), axis.text.x = element_text(angle=15, hjust=1, size=12))+
+#   geom_text(aes(label =paste0(Percent,'%')), vjust=-0.2)
+
+tn_eth$fraction = tn_eth$Count/sum(tn_eth$Count) #Compute percentages
+tn_eth$ymax = cumsum(tn_eth$fraction) #compute the cumulative percentages (top of each rectangle)
+tn_eth$ymin = c(0, head(tn_eth$ymax, n=-1)) #Compute the bottom of each rectangle
+tn_eth$labelPosition = (tn_eth$ymax + tn_eth$ymin)/2 #Calculate label position
+tn_eth$label = paste0(tn_eth$Ethnicity, '\n Percent: ', tn_eth$Percent)
+
+
+ggplot(tn_eth, aes(ymax = ymax, ymin=ymin, xmax=4, xmin=3, fill=Ethnicity))+
+  geom_rect()+
+  coord_polar(theta = 'y')+
+  xlim(c(2,4))+
+  theme_void()+
+  scale_fill_brewer(palette = "Set1")
+
+```
+
 
 
 
