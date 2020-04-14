@@ -121,10 +121,10 @@ total_cases = sum(tn_daily$Positive)
 total_negative = sum(tn_daily$Negative)
 total_death = sum(tn_daily$Death)
 
-total = sum(total_cases, total_negative, total_death)
+total_tests = sum(total_cases, total_negative)
 
 #Total Positive Cases
-cases_per = ((total_cases/total)*100) %>% round(1) %>% paste0('%')
+cases_per = ((total_cases/total_tests)*100) %>% round(1) %>% paste0('%')
 total_cases = total_cases %>% formattable::comma(digits=0) %>% paste0(' (',cases_per,')')
 
 valueBox(value = total_cases, icon='fa-user-plus', color='#002D65')
@@ -134,7 +134,7 @@ valueBox(value = total_cases, icon='fa-user-plus', color='#002D65')
 
 ```{r} 
 #Total Negative Cases
-negative_per = ((total_negative/total)*100) %>% round(1) %>% paste0('%')
+negative_per = ((total_negative/total_tests)*100) %>% round(1) %>% paste0('%')
 total_negative = total_negative %>% formattable::comma(digits=0) %>% paste0(' (', negative_per,')') 
 valueBox(value = total_negative, icon='fa-user-minus', color='#CC0000')
 ```
@@ -143,7 +143,7 @@ valueBox(value = total_negative, icon='fa-user-minus', color='#CC0000')
 
 ```{r} 
 #Total Deaths Cases
-death_per = ((total_death/total)*100) %>% round(1) %>% paste0('%')
+death_per = ((total_death/sum(tn_daily$Positive))*100) %>% round(1) %>% paste0('%')
 total_death = total_death %>% formattable::comma(digits=0) %>% paste0(' (',death_per,')')  
 valueBox(value = total_death, color='#002D65')
 ```
