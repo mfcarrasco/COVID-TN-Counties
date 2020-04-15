@@ -154,7 +154,7 @@ Data Visualizations by County
 
 Rows {data-width = 150}
 -----------
-### Total Cases in TN
+### Confirmed Cases to Date
 
 ```{r}
 #Total Positive Cases
@@ -172,47 +172,32 @@ total_negative_vb = total_negative %>% formattable::comma(digits=0) %>% paste0('
 valueBox(value = total_negative_vb, icon='fa-user-minus', color='#CC0000')
 ```
 
-### Total Deaths
-
-```{r} 
-#Total Deaths Cases
-death_per = ((total_death/total_cases)*100) %>% round(1) %>% paste0('%')
-total_death_vb = total_death %>% formattable::comma(digits=0) %>% paste0(' (',death_per,')')  
-valueBox(value = total_death_vb, color='#002D65')
-```
 
 Rows {data-width = 150}
 -----------
-<!-- ### Recovered Cases -->
 
-<!-- ```{r}  -->
-<!-- #Recovered -->
-<!-- recov_per = ((total_recov/total_cases)*100) %>% round(1) %>% paste0('%') -->
-<!-- total_recov_vb = total_recov %>% formattable::comma(digits=0) %>% paste0(' (',recov_per,')')  -->
-<!-- valueBox(value = total_recov_vb, color='#002D65') -->
-<!-- ``` -->
-
-### Recovered Cases
+### Recovered Cases: `r total_recov %>% formattable::comma(digits=0)`
 ```{r}
-recov_per = ((total_recov/total_cases)*100) %>% round(1)
+recov_per = ((total_recov/(total_cases))*100) %>% round(1)
 gauge(recov_per, min=0, max = 100, symbol = '%')
 ```
 
-<!-- ### Active Cases -->
-
-<!-- ```{r}  -->
-<!-- #Active Cases -->
-<!-- active_per = ((active_cases/(total_cases-total_death))*100) %>% round(1) %>% paste0('%') -->
-<!-- active_cases_vb = active_cases %>% formattable::comma(digits=0) %>% paste0(' (',active_per,')')   -->
-<!-- valueBox(value = active_cases_vb, color='#002D65') -->
-<!-- ``` -->
-
-### Active Cases
+### Active Cases: `r active_cases %>% formattable::comma(digits=0)`
 ```{r}
-active_per = ((active_cases/(total_cases-total_death))*100) %>% round(1) 
+active_per = ((active_cases/(total_cases))*100) %>% round(1) 
 gauge(active_per, min=0, max = 100, symbol = '%', 
       gaugeSectors(
         success = c(0,25), warning = c(26,100)))
+```
+
+### Total Deaths: `r total_death %>% formattable::comma(digits=0)` 
+
+```{r} 
+ #Total Deaths Cases
+death_per = ((total_death/total_cases)*100) %>% round(1) %>% paste0('%')
+gauge(death_per, min=0, max = 100, symbol = '%', 
+      gaugeSectors(
+        success = c(0,5), warning = c(6,100)))
 ```
 
 
@@ -230,7 +215,9 @@ tn_top = tn[ tn$county %in% tn_top,]
 t_line = tn_pop_line =ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
-  labs(x='', y='Cases')+theme(legend.title = element_blank(), panel.background = element_blank(), axis.line.x=element_line(), axis.line.y.left = element_line(), axis.text=element_text(face='bold'),axis.text.x = element_text(angle=45, hjust=1))
+  labs(x='', y='Cases')+
+  theme(legend.title = element_blank(), panel.background = element_blank(), axis.line.x=element_line(), axis.line.y.left = element_line(), axis.text=element_text(face='bold'),axis.text.x = element_text(angle=45, hjust=1))+
+  scale_color_brewer(palette = 'Spectral',direction=-1)
 ggplotly(t_line)
 ```
 
@@ -242,7 +229,7 @@ tn_top = tn[ tn$county %in% tn_top,]
 
 ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
-  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%m-%d')+
+  scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%m-%d')+
   labs(x='', y='Cases')+
   theme(legend.title = element_blank(), 
         panel.background = element_blank(),
@@ -251,10 +238,11 @@ ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
         legend.position = c(0,.9),
-        legend.justification = c(-0.1,.8))
+        legend.justification = c(-0.1,.8))+
+  scale_color_brewer(palette = 'Spectral',direction=-1)
 ```
 
-Row {data-width = 650}
+Row {data-width=400}
 -------------------------
 
 ### Cases per million residents
@@ -277,13 +265,23 @@ plot_usmap(include='TN', regions =  'counties',
   labs(caption = format(Sys.time(), "%D"))
 ```
 
-Column {data-width=350, data-height=950}
+
+### Case numbers by county
+```{r}
+#Trying Data table
+tn_daily[,2:5] %>%
+  DT::datatable(rownames = FALSE,
+                colnames = c('County', 'Confirmed', 'Negative', 'Death'),
+                options = list(pageLength = 10))
+```
+
+Column {data-width=350, data-height=400}
 -----------------------------------------------------------------------
 
-### Positive cases by county
+### Positive cases by counties with more than 20 cases
 
 ```{r}
-tn_cases = tn_daily[which(tn_daily$Positive != 0 & 
+tn_cases = tn_daily[which(tn_daily$Positive >20 & 
                             tn_daily$County != 'Pending'  &
                             tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
 
@@ -325,13 +323,11 @@ ggplot(data=tn_cases,aes(x=Positive, y=reorder(County,Positive)))+
   ggtitle("Counties with more than 20 cases")
 ```
 
-Column {data-height=650}
------------------------------------------------------------------------
 
-### All Cases by County
+### All outcomes by counties with more than 50 cases
 
 ```{r}
-tn_cases = tn_daily[which(tn_daily$Positive != 0 & 
+tn_cases = tn_daily[which(tn_daily$Positive > 50 & 
                             tn_daily$County != 'Pending'  &
                             tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
 
@@ -498,7 +494,7 @@ ggplot(tn_race, aes(ymax = ymax, ymin=ymin, xmax=4, xmin=3, fill=Race))+
   coord_polar(theta = 'y')+
   xlim(c(2,4))+
   theme_void()+
-  scale_fill_brewer(palette = "Set1")
+  scale_fill_brewer(palette = "Spectral")
 ```
 
 ### Confirmed Cases by Ethnicity
