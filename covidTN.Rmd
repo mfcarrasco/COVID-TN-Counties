@@ -178,6 +178,7 @@ Rows {data-width = 150}
 
 ### Recovered Cases: `r total_recov %>% formattable::comma(digits=0)`
 ```{r}
+recov_label = (total_recov %>% formattable::comma(digits=0))
 recov_per = ((total_recov/(total_cases))*100) %>% round(1)
 gauge(recov_per, min=0, max = 100, symbol = '%')
 ```
@@ -244,26 +245,58 @@ ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
 
 Row {data-width=400}
 -------------------------
-
-### Cases per million residents
-
-```{r, fig.width=10, fig.height=5}
+### Cases rate 
+```{r}
 library(usmap)
 library(viridis)
 tn_geo =tn %>% group_by(county) %>% top_n(1,date)
 tn_geo = tn_geo[!(tn_geo$county =='Unknown'),]
+tn_geo$fips =fips(state = 'TN', county=tn_geo$county)
 
+library(rjson)
+url = 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json'
+json_file <- rjson::fromJSON(file=url)
 
-tn_geo$fips =fips(state = 'TN', county=tn_geo$county) #get missing fips values for map
+#Create map
 
-plot_usmap(include='TN', regions =  'counties',
-           data=tn_geo, values='cases_per_million')+
-  labs(title="COVID Cases per Million in Tennessee",
-       subtitle = "Based on NYTimes Github Data & \nCensus 2019 Estimates")+
-  scale_fill_viridis(name='Cases per million')+
-  theme(legend.position = 'right')+
-  labs(caption = format(Sys.time(), "%D"))
+fig <- plot_ly() %>% 
+  add_trace(
+    text = paste(tn_geo$county,' County'),
+    hoverinfo = 'text',
+    type='choroplethmapbox',
+    geojson= json_file,
+    locations=tn_geo$fips,
+    z = tn_geo$cases_per_million,
+    zmin=0,
+    zmax = round(max(tn_geo$cases_per_million),-3),
+    colorscale='Viridis',
+    marker=list(line=list(
+      width=0),
+      opacity=0.9)) %>% 
+  layout(mapbox=list(
+    style="carto-positron",
+    zoom =5.1,
+    center=list(lon= -86.7816, lat=36.1627))) %>%
+  colorbar(title = "Cases per million") 
+fig
+
 ```
+<!-- ### Cases rate {.mobile} -->
+
+<!-- ```{r, fig.width=10, fig.height=5} -->
+<!-- library(usmap) -->
+<!-- library(viridis) -->
+<!-- tn_geo =tn %>% group_by(county) %>% top_n(1,date) -->
+<!-- tn_geo = tn_geo[!(tn_geo$county =='Unknown'),] -->
+
+
+<!-- tn_geo$fips =fips(state = 'TN', county=tn_geo$county) #get missing fips values for map -->
+
+<!-- plot_usmap(include='TN', regions =  'counties', -->
+<!--            data=tn_geo, values='cases_per_million')+ -->
+<!--   scale_fill_viridis(name='Cases per million')+ -->
+<!--   theme(legend.position = 'right') -->
+<!-- ``` -->
 
 
 ### Case numbers by county
