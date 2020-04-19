@@ -430,9 +430,13 @@ Data Visualizatons by Demographics
 
 Column {data-width=350, data-height=450}
 ---------------------------
-
 ### Confirmed Cases by Age
 ```{r}
+#Get US Census Data
+census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
+
+age_census = readxl::read_excel('census_demographics.xlsx',sheet='Age')
+
 #Get TN Data
 tn_age = 'https://myutk.maps.arcgis.com/sharing/rest/content/items/1bdfe86c38514c9c878241d5230d9a85/data'
 
@@ -440,35 +444,44 @@ download.file(tn_age,'TN_Age.xlsx')
 
 tn_age =  readxl::read_excel('TN_Age.xlsx',sheet=1) %>% 
   top_n(1,DATE) %>%
-  select(DATE, AGE, TOT_CASE_COUNT, DEATHS_TOT) %>%
-  filter(AGE != 'Pending')
+  select(DATE, AGE, TOT_CASE_COUNT, DEATHS_TOT)
 
 
 names(tn_age) = c('Date', 'Age_Ranges', 'Count',  'Deaths')
 
 tn_age$Age_Ranges = as.factor(tn_age$Age_Ranges)
-tn_age$Percent = round((tn_age$Count/sum(tn_age$Count))*100,1)
+tn_age$Case_Percent = round((tn_age$Count/sum(tn_age$Count))*100,1)
+tn_age$Death_Percent =round((tn_age$Deaths/sum(tn_age$Deaths))*100,1)
+tn_age$Census_Percent = round(age_census$Percent, 1)
+tn_age$Census_Percent[10] = NA
+
+tn_age = tn_age[,c('Age_Ranges', 'Case_Percent','Death_Percent','Census_Percent')] %>%
+  tidyr::gather('Percent', 'Value', -Age_Ranges)
 
 #Plot
-fills = c('Count' = '#002D65', 'Deaths' = '#CC0000')
-ggplot(data=tn_age, aes(x=Age_Ranges))+
-  geom_col(aes(y=Count, fill='Count'))+
-  geom_col(aes(y=Deaths,fill='Deaths'))+
+fills = c('Case_Percent' = 'grey', 'Death_Percent' = '#CC0000', 'Census_Percent' = '#002D65')
+ggplot(data=tn_age, aes(x=Age_Ranges, y = Value, fill=Percent))+
+  geom_col(position='dodge')+
   xlab('')+
+  ylab('Percent')+
   theme(panel.background = element_blank(), 
         axis.line = element_line(), 
         axis.text = element_text(face = 'bold'),
         axis.text.x = element_text(angle=30),
-        legend.title = element_blank()
-  )+
-  geom_text(aes(y=Count,label =paste0(Percent, '%' )), vjust=-0.2, size =3)+
-  geom_text(aes(y=Deaths,label =paste(Deaths)), vjust=-0.2, color='white', size = 3)+
-  scale_fill_manual(values=fills)
-  
+        legend.title = element_blank(), 
+        legend.direction='horizontal',
+        legend.position = 'top')+
+  scale_fill_manual(values=fills, labels=c('Cases', 'Percent of Population', 'Deaths'))
 ```
 
 ### Confirmed Cases by Sex
 ```{r}
+#Get Census Demographics
+census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
+
+sex_census = readxl::read_excel('census_demographics.xlsx',sheet='Sex')
+names(sex_census) = c('Sex', 'Census_Percent')
+##stopped here####
 tn_demo = 'https://myutk.maps.arcgis.com/sharing/rest/content/items/4ff6b762d64a4e0caa626df00a76c902/data'
 
 download.file(tn_demo,'TN_Demographics.xlsx') 
@@ -482,14 +495,25 @@ tn_sex = tn_demo[[2]] %>%
   select(DETAIL, TOT_CASE_COUNT)
 
 names(tn_sex) = c('Sex', 'Count')
-tn_sex$Percent = round((tn_sex$Count/sum(tn_sex$Count))*100,1)
+tn_sex$Case_Percent = round((tn_sex$Count/sum(tn_sex$Count))*100,1)
+
+tn_sex = dplyr::left_join(tn_sex[,c(1,3)], sex_census, 'Sex') %>%
+  tidyr::gather('Percent', 'Value', -Sex)
 
 
-ggplot(data=tn_sex, aes(x=Sex, y=Count))+
-  geom_col(fill='#CC0000', width=.5)+
+
+fills = c('Case_Percent' = 'grey','Census_Percent' = '#002D65')
+ggplot(data=tn_sex, aes(x=Sex, y = Value, fill=Percent))+
+  geom_col(position='dodge')+
   xlab('')+
-  theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12))+
-  geom_text(aes(label =paste0(Percent, '%' )), vjust=-0.2)
+  ylab('Percent')+
+  theme(panel.background = element_blank(), 
+        axis.line = element_line(), 
+        axis.text = element_text(face = 'bold'),
+        legend.title = element_blank(), 
+        legend.direction='horizontal',
+        legend.position = 'top')+
+  scale_fill_manual(values=fills, labels=c('Cases', 'Percent of Population'))
 ```
 
 
@@ -579,5 +603,7 @@ Note: This dashboard has different graphs for small screens. For more interactiv
 Data for "Cases across time in most populous counties" is a concatenation of the [New York Times Coronavirus Data](https://github.com/nytimes/covid-19-data) and the [Tennessee State Data Center](https://myutk.maps.arcgis.com/home/group.html?id=c98fc99308dd43fb98146d3cf21fc31c&q=tags%3A%22COVID-19%22&view=list&focus=files#content), which acquires its data from the [TN Department of Health](https://www.tn.gov/health/cedep/ncov.html)
 
 Latest data from `r max(tn$date) %>% format('%m-%d')`.
+
+Population data acquired from the [US Census](https://data.census.gov/cedsci/table?q=Tennessee%20race%20demographics&g=0400000US47&tid=ACSDP1Y2018.DP05&hidePreview=true).
 
 Created by [Malle Carrasco-Harris](https://www.linkedin.com/in/malle-carrasco-harris).  
