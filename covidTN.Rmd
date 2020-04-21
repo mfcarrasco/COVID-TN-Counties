@@ -436,7 +436,8 @@ Column {data-width=350, data-height=450}
 census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
 
 age_census = readxl::read_excel('census_demographics.xlsx',sheet='Age')
-
+age_census$Percent = round(age_census$Percent, 1) 
+names(age_census)[3]='Census_Percent'
 #Get TN Data
 tn_age = 'https://myutk.maps.arcgis.com/sharing/rest/content/items/1bdfe86c38514c9c878241d5230d9a85/data'
 
@@ -452,16 +453,21 @@ names(tn_age) = c('Date', 'Age_Ranges', 'Count',  'Deaths')
 tn_age$Age_Ranges = as.factor(tn_age$Age_Ranges)
 tn_age$Case_Percent = round((tn_age$Count/sum(tn_age$Count))*100,1)
 tn_age$Death_Percent =round((tn_age$Deaths/sum(tn_age$Deaths))*100,1)
-tn_age$Census_Percent = round(age_census$Percent, 1)
-tn_age$Census_Percent[10] = NA
 
-tn_age = tn_age[,c('Age_Ranges', 'Case_Percent','Death_Percent','Census_Percent')] %>%
+
+
+tn_age = tn_age[,c('Age_Ranges', 'Case_Percent','Death_Percent')] %>%
   tidyr::gather('Percent', 'Value', -Age_Ranges)
 
+tn_age = cbind(tn_age, age_census[,3])
+tn_age$Census_Percent[c(10,20)] = NA
+
 #Plot
-fills = c('Case_Percent' = 'grey', 'Death_Percent' = '#CC0000', 'Census_Percent' = '#002D65')
-ggplot(data=tn_age, aes(x=Age_Ranges, y = Value, fill=Percent))+
-  geom_col(position='dodge')+
+fills = c('Case_Percent' = '#002D65', 'Death_Percent' = '#CC0000', 'Overall Population' = 'grey')
+
+ggplot(tn_age,aes(x=Age_Ranges))+
+  geom_col(aes(y = Value, fill=Percent),position=position_dodge())+
+  geom_line(aes(y=Census_Percent, group = 1, color='population',), linetype = 'dashed')+
   xlab('')+
   ylab('Percent')+
   theme(panel.background = element_blank(), 
@@ -470,17 +476,20 @@ ggplot(data=tn_age, aes(x=Age_Ranges, y = Value, fill=Percent))+
         axis.text.x = element_text(angle=30),
         legend.title = element_blank(), 
         legend.direction='horizontal',
-        legend.position = 'top')+
-  scale_fill_manual(values=fills, labels=c('Cases', 'Percent of Population', 'Deaths'))
+        legend.position = c(.2,.90),
+        legend.box.just = 'left')+
+  scale_fill_manual(values= fills, labels=c('Cases', 'Deaths'))+
+  scale_color_manual(values = c('population' = 'black'),labels = 'Overall Population')
 ```
 
 ### Confirmed Cases by Sex
 ```{r}
-#Get Census Demographics
+#Get US Census Data
 census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
 
 sex_census = readxl::read_excel('census_demographics.xlsx',sheet='Sex')
 names(sex_census) = c('Sex', 'Census_Percent')
+
 ##stopped here####
 tn_demo = 'https://myutk.maps.arcgis.com/sharing/rest/content/items/4ff6b762d64a4e0caa626df00a76c902/data'
 
@@ -497,14 +506,11 @@ tn_sex = tn_demo[[2]] %>%
 names(tn_sex) = c('Sex', 'Count')
 tn_sex$Case_Percent = round((tn_sex$Count/sum(tn_sex$Count))*100,1)
 
-tn_sex = dplyr::left_join(tn_sex[,c(1,3)], sex_census, 'Sex') %>%
-  tidyr::gather('Percent', 'Value', -Sex)
+tn_sex = dplyr::left_join(tn_sex[,c(1,3)], sex_census, 'Sex') 
 
-
-
-fills = c('Case_Percent' = 'grey','Census_Percent' = '#002D65')
-ggplot(data=tn_sex, aes(x=Sex, y = Value, fill=Percent))+
-  geom_col(position='dodge')+
+ggplot(data=tn_sex, aes(x=Sex))+
+  geom_col(aes(y=Case_Percent),fill='#002D65')+
+  geom_line(aes(y=Census_Percent, group=1, color='population'), linetype = 'dashed')+
   xlab('')+
   ylab('Percent')+
   theme(panel.background = element_blank(), 
@@ -512,8 +518,10 @@ ggplot(data=tn_sex, aes(x=Sex, y = Value, fill=Percent))+
         axis.text = element_text(face = 'bold'),
         legend.title = element_blank(), 
         legend.direction='horizontal',
-        legend.position = 'top')+
-  scale_fill_manual(values=fills, labels=c('Cases', 'Percent of Population'))
+        legend.position = c(.85,.90),
+        legend.box.just = 'left')+
+  scale_color_manual(values = c('population' = 'black'),labels = 'Overall Population')
+
 ```
 
 
@@ -523,6 +531,14 @@ Column {data-width=350, data-height=450}
 
 ### Confirmed Cases by Race
 ```{r}
+#Get US Census Data
+census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
+
+race_census = readxl::read_excel('census_demographics.xlsx',sheet='Race') %>% 
+  select(Race = Race, Census_Percent =Percent)
+race_census$Census_Percent = round(race_census$Census_Percent, 1)
+
+
 #Get TN Data
 tn_race = tn_demo[[3]] %>% 
   select(DETAIL, TOT_CASE_COUNT)
@@ -530,61 +546,65 @@ tn_race = tn_demo[[3]] %>%
 names(tn_race) = c('Race', 'Count')
 tn_race$Percent = round((tn_race$Count/sum(tn_race$Count))*100,1)
 
-# #Plot
-# ggplot(data=tn_race, aes(x=reorder(Race, Count), y=Count))+
-#   geom_col(fill='#CC0000')+
-#   xlab('')+
-#   theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12), axis.text.x = element_text(angle=15, hjust=1, size=12))+
-#   geom_text(aes(label =paste0(Percent,'%')), vjust=-0.2)
+tn_race = dplyr::left_join(tn_race[,c(1,3)], race_census, 'Race')
+tn_race$Race = factor(tn_race$Race, levels = c('Asian', 'Black or African American', 'White', 'Other/Two or More Races', 'Pending'))
 
-
-#Donut chart
-tn_race$fraction = tn_race$Count/sum(tn_race$Count) #Compute percentages
-tn_race$ymax = cumsum(tn_race$fraction) #compute the cumulative percentages (top of each rectangle)
-tn_race$ymin = c(0, head(tn_race$ymax, n=-1)) #Compute the bottom of each rectangle
-tn_race$labelPosition = (tn_race$ymax + tn_race$ymin)/2 #Calculate label position
-tn_race$label = paste0(tn_race$Race, '\n Percent: ', tn_race$Percent)
-
-
-ggplot(tn_race, aes(ymax = ymax, ymin=ymin, xmax=4, xmin=3, fill=Race))+
-  geom_rect()+
-  coord_polar(theta = 'y')+
-  xlim(c(2,4))+
-  theme_void()+
-  scale_fill_brewer(palette = "Spectral")
+ggplot(data=tn_race, aes(x=Race))+
+  geom_bar(stat = 'identity',aes(y=Percent),fill='#002D65')+
+  geom_line(aes(y=Census_Percent, group=1, color='population'), linetype = 'dashed')+
+  xlab('')+
+  ylab('Percent')+
+  theme(panel.background = element_blank(), 
+        axis.line = element_line(), 
+        axis.text = element_text(face = 'bold'),
+        axis.text.x = element_text(angle=30, h = 1),
+        legend.title = element_blank(), 
+        legend.direction='horizontal',
+        legend.position = c(.85,.90),
+        legend.box.just = 'left')+
+  scale_color_manual(values = c('population' = 'black'),labels = 'Overall Population')
 ```
 
 ### Confirmed Cases by Ethnicity
 ```{r}
+#Get US Census Data
+census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
+
+eth_census = readxl::read_excel('census_demographics.xlsx',sheet='Ethnicity') %>% 
+  select(Ethnicity = Ethnicity, Census_Percent =Percent)
+eth_census$Census_Percent = round(eth_census$Census_Percent, 1)
+
+
+
 tn_eth = tn_demo[[1]] %>% 
   select(DETAIL, TOT_CASE_COUNT)
 
 names(tn_eth) = c('Ethnicity', 'Count')
 tn_eth$Percent = tn_eth$Count/sum(tn_eth$Count)*100
 
-# #Plot
-# ggplot(data=tn_eth, aes(x=reorder(Ethnicity, Count), y=Count))+
-#   geom_col(fill='#CC0000')+
-#   xlab('')+
-#   theme(panel.background = element_blank(), axis.line = element_line(), axis.text = element_text(face = 'bold', size = 12), axis.text.x = element_text(angle=15, hjust=1, size=12))+
-#   geom_text(aes(label =paste0(Percent,'%')), vjust=-0.2)
+tn_eth = dplyr::left_join(tn_eth[,c(1,3)], eth_census, 'Ethnicity')
+tn_eth$Ethnicity = factor(tn_eth$Ethnicity, levels = c('Hispanic or Latino','Not Hispanic or Latino', 'Pending'))
 
-tn_eth$fraction = tn_eth$Count/sum(tn_eth$Count) #Compute percentages
-tn_eth$ymax = cumsum(tn_eth$fraction) #compute the cumulative percentages (top of each rectangle)
-tn_eth$ymin = c(0, head(tn_eth$ymax, n=-1)) #Compute the bottom of each rectangle
-tn_eth$labelPosition = (tn_eth$ymax + tn_eth$ymin)/2 #Calculate label position
-tn_eth$label = paste0(tn_eth$Ethnicity, '\n Percent: ', tn_eth$Percent)
-
-
-ggplot(tn_eth, aes(ymax = ymax, ymin=ymin, xmax=4, xmin=3, fill=Ethnicity))+
-  geom_rect()+
-  coord_polar(theta = 'y')+
-  xlim(c(2,4))+
-  theme_void()+
-  scale_fill_brewer(palette = "Set1")
-
+ggplot(data=tn_eth, aes(x=Ethnicity))+
+  geom_bar(stat = 'identity',aes(y=Percent),fill='#002D65')+
+  geom_line(aes(y=Census_Percent, group=1, color='population'), linetype = 'dashed')+
+  xlab('')+
+  ylab('Percent')+
+  theme(panel.background = element_blank(), 
+        axis.line = element_line(), 
+        axis.text = element_text(face = 'bold'),
+        axis.text.x = element_text(angle=30, h = 1),
+        legend.title = element_blank(), 
+        legend.direction='horizontal',
+        legend.position = c(.85,.90),
+        legend.box.just = 'left')+
+  scale_color_manual(values = c('population' = 'black'),labels = 'Overall Population')
 ```
 
+
+Row
+----
+These visualizations compare the demographics of COVID Cases to the Census percents. Bars represent the percent of cases and the dashed line represents the census percents for each category in the state of Tennessee. Bars that are under the line suggest those demographic groups are affected by COVID less than their state percent. Similarly, bars crossing the line suggest those demographic populations are affected more than their proportion of the state population.For example, it has been reported that males are more affected than females. In Tennessee, it appears that case percents are proportional to the sexes. There are more females in the state of Tennessee, and we see more cases of females positively diagnosed with COVID.  
 
 
 
