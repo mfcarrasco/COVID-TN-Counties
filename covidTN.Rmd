@@ -26,23 +26,26 @@ color:white!important;
 library(flexdashboard)
 library(readr)
 library(ggplot2)
+library(plotly)
 library(tidyverse)
 library(dplyr)
+
 #Acquire Data####
-#Load NY Times Data###
+#Load NY Times Github data###
 nyt_path = 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv'
 
-counties = read_csv(url(nyt_path)) #Originally contains all counties in US.
+counties = read_csv(url(nyt_path)) #Contains all counties in US.
 
 #Separate State
 tn = counties[ which(counties$state =='Tennessee'),]
 tn = tn[which(tn$date < '2020-03-31'),] #The Tennessee data from the new source has data starting March 31
 
-#Tennessee data from online
+#Tennessee data from TN State Data Center
 tn_state = 'https://myutk.maps.arcgis.com/sharing/rest/content/items/32b104abc5d841ca895de7f7c17fc4dc/data'
 
 download.file(tn_state,'TN_COVID19_CountyDaily.xlsx') 
 
+#Data cleaning and processing####
 tn_daily =  readxl::read_excel('TN_COVID19_CountyDaily.xlsx',sheet=1) %>%
   filter(DATE > '2020-03-30') %>%
   select(DATE, COUNTY, TEST_POS, TEST_NEG, DEATHS_TOT) %>%
@@ -62,14 +65,7 @@ tn_daily$County =ifelse(tn_daily$County == 'VanBuren',
                         'Van Buren', 
                         tn_daily$County)
 
-tn_daily$County = sub('ﬀ', "ff", tn_daily$County) #Coffee and Jefferson have some weird issues.
-
-#Check counties
-#levels(as.factor(tn_daily$County))
-
 tn_daily$County = as.factor(tn_daily$County)
-#tn_daily$Date = as.Date(tn_daily$Date, format = '%m/%d/%y')
-
 
 #Merge NYT and Tn Daily dataframes####
 tn_daily2 = tn_daily[,c('Date','County', 'Positive', 'Death')]
@@ -84,8 +80,9 @@ tn_daily2 = left_join(tn_daily2, fips_daily[,1:2], by ='county')
 tn = rbind(tn, tn_daily2) #Rbind will automatically put the correct columns together. 
 
 
-#Add population ####
-#Get Population for counties in Tennessee
+#Add population####
+#Get Census Population for counties in Tennessee
+
 uscensus = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/county_pop_2019.csv'
 tn_pop = read_csv(url(uscensus))
 tn_pop = tn_pop[ which(tn_pop$State =='Tennessee'),]
@@ -94,7 +91,6 @@ tn_pop$County = gsub(' County', '', tn_pop$County)
 tn_pop$Population = as.numeric(tn_pop$Population)
 tn_pop = tn_pop[, c('County', 'Population')]
 names(tn_pop) = c('county', 'population')
-#tn_pop[order(-tn_pop$population),]
 
 ##Combine tn (NYT) dataframe with Population
 tn = left_join(tn, tn_pop, by='county')
@@ -102,6 +98,8 @@ tn$county = as.factor(tn$county)
 
 #Calculate per million
 tn['cases_per_million'] = (tn$cases/tn$population)*10^6
+#Tn dataframe is ready for long term data visualiations and includes standardization by population.
+
 
 #Keep most recent for tn_daily
 tn_daily = tn_daily %>% group_by(County) %>% top_n(1, Date)
@@ -111,7 +109,7 @@ rm(list=ls()[!ls() %in% c('tn', 'tn_daily')])
 
 
 
-#Value Box Calculations
+#Value Box Calculations####
 tn_ext =  readxl::read_excel('TN_COVID19_COUNTYDaily.xlsx',sheet=1) %>%
   top_n(1,DATE) %>%
   select(DATE:RATE_CHG_1DAY,RECOV_TOT:ACTIVE_NEW) %>%
@@ -120,16 +118,6 @@ tn_ext =  readxl::read_excel('TN_COVID19_COUNTYDaily.xlsx',sheet=1) %>%
 tn_ext$COUNTY = ifelse(tn_ext$COUNTY == 'Non-Tennessee Resident',
                          "Out of TN",
                          tn_ext$COUNTY)
-
-tn_ext$COUNTY =ifelse(tn_ext$COUNTY == 'Dekalb', 
-                        'DeKalb', 
-                        tn_ext$COUNTY)
-
-tn_ext$COUNTY =ifelse(tn_ext$COUNTY == 'VanBuren', 
-                        'Van Buren', 
-                        tn_ext$COUNTY)
-
-tn_ext$COUNTY = sub('ﬀ', "ff", tn_ext$COUNTY) #Coffee and Jefferson have some weird issues.
 
 
 tn_ext$COUNTY = as.factor(tn_ext$COUNTY)
@@ -158,8 +146,14 @@ Rows {data-width = 150}
 
 ```{r}
 #Total Positive Cases
-cases_per = ((total_cases/total_tests)*100) %>% round(1) %>% paste0('%')
-total_cases_vb = total_cases %>% formattable::comma(digits=0) %>% paste0(' (',cases_per,')') 
+cases_per = ((total_cases/total_tests)*100) %>% 
+  round(1) %>% 
+  paste0('%')
+
+total_cases_vb = total_cases %>% 
+  formattable::comma(digits=0) %>% 
+  paste0(' (',cases_per,')') 
+
 valueBox(value = total_cases_vb, icon='fa-user-plus', color='#002D65')
 ```
 
@@ -167,8 +161,12 @@ valueBox(value = total_cases_vb, icon='fa-user-plus', color='#002D65')
 
 ```{r} 
 #Total Negative Cases
-negative_per = ((total_negative/total_tests)*100) %>% round(1) %>% paste0('%')
-total_negative_vb = total_negative %>% formattable::comma(digits=0) %>% paste0(' (', negative_per,')') 
+negative_per = ((total_negative/total_tests)*100) %>% 
+  round(1) %>% paste0('%')
+
+total_negative_vb = total_negative %>% 
+  formattable::comma(digits=0) %>% paste0(' (', negative_per,')') 
+
 valueBox(value = total_negative_vb, icon='fa-user-minus', color='#CC0000')
 ```
 
@@ -178,14 +176,15 @@ Rows {data-width = 150}
 
 ### Recovered Cases: `r total_recov %>% formattable::comma(digits=0)`
 ```{r}
-recov_label = (total_recov %>% formattable::comma(digits=0))
 recov_per = ((total_recov/(total_cases))*100) %>% round(1)
+
 gauge(recov_per, min=0, max = 100, symbol = '%')
 ```
 
 ### Active Cases: `r active_cases %>% formattable::comma(digits=0)`
 ```{r}
 active_per = ((active_cases/(total_cases))*100) %>% round(1) 
+
 gauge(active_per, min=0, max = 100, symbol = '%', 
       gaugeSectors(
         success = c(0,25), warning = c(26,100)))
@@ -196,6 +195,7 @@ gauge(active_per, min=0, max = 100, symbol = '%',
 ```{r} 
  #Total Deaths Cases
 death_per = ((total_death/total_cases)*100) %>% round(1) %>% paste0('%')
+
 gauge(death_per, min=0, max = 100, symbol = '%', 
       gaugeSectors(
         success = c(0,5), warning = c(6,100)))
@@ -208,7 +208,7 @@ Column {data-width=650}
 ### Cases across time in most populous counties
 
 ```{r}
-library(plotly)
+
 tn_top =c('Shelby', 'Davidson', 'Knox', 'Hamilton', 'Rutherford', 'Williamson')
 tn_top = tn[ tn$county %in% tn_top,]
 
@@ -275,33 +275,15 @@ fig <- plot_ly() %>%
       opacity=0.9)) %>% 
   layout(mapbox=list(
     style="carto-positron",
-    zoom =5.1,
+    zoom =5.05,
     center=list(lon= -86.7816, lat=36.1627))) %>%
   colorbar(title = "Cases per million") 
 fig
 
 ```
-<!-- ### Cases rate {.mobile} -->
-
-<!-- ```{r, fig.width=10, fig.height=5} -->
-<!-- library(usmap) -->
-<!-- library(viridis) -->
-<!-- tn_geo =tn %>% group_by(county) %>% top_n(1,date) -->
-<!-- tn_geo = tn_geo[!(tn_geo$county =='Unknown'),] -->
-
-
-<!-- tn_geo$fips =fips(state = 'TN', county=tn_geo$county) #get missing fips values for map -->
-
-<!-- plot_usmap(include='TN', regions =  'counties', -->
-<!--            data=tn_geo, values='cases_per_million')+ -->
-<!--   scale_fill_viridis(name='Cases per million')+ -->
-<!--   theme(legend.position = 'right') -->
-<!-- ``` -->
-
 
 ### Case numbers by county
 ```{r}
-#Trying Data table
 tn_daily[,2:5] %>%
   DT::datatable(rownames = FALSE,
                 colnames = c('County', 'Confirmed', 'Negative', 'Death'),
@@ -316,8 +298,8 @@ Column {data-width=350, data-height=400}
 ```{r}
 tn_cases = tn_daily[which(tn_daily$Positive >20 & 
                             tn_daily$County != 'Pending'  &
-                            tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
-
+                            tn_daily$County != 'Out of TN'), 
+                    c('County', 'Positive','Negative','Death')] 
 plot_ly(data=tn_cases,
         x=tn_cases$Positive,
         y=reorder(tn_cases$County, tn_cases$Positive),
@@ -341,7 +323,8 @@ plot_ly(data=tn_cases,
 ```{r}
 tn_cases = tn_daily[which(tn_daily$Positive > 20 & 
                             tn_daily$County != 'Pending'  &
-                            tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
+                            tn_daily$County != 'Out of TN'), 
+                    c('County', 'Positive','Negative','Death')]
 
 ggplot(data=tn_cases,aes(x=Positive, y=reorder(County,Positive)))+
   geom_col(fill='#002D65')+
@@ -369,10 +352,10 @@ plot_ly(data=tn_cases,
         y=tn_cases$Negative,
         type='bar',
         name='Negative Cases',
-        marker= list(color='#002D65')) %>%
+        marker= list(color='grey')) %>%
           add_trace(y = tn_cases$Positive,
                     name='Positive Cases',
-                    marker = list(color='grey')) %>%
+                    marker = list(color='#002D65')) %>%
           add_trace(y = tn_cases$Death,
                     name='Deaths',
                     marker = list(color='#CC0000')) %>%
@@ -393,36 +376,26 @@ plot_ly(data=tn_cases,
 ### All Cases by County {.mobile}
 
 ```{r}
-library(plotly)
 tn_cases = tn_daily[which(tn_daily$Positive > 50 & 
                             tn_daily$County != 'Pending'  &
-                            tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] 
+                            tn_daily$County != 'Out of TN'), 
+                    c('County', 'Death','Negative','Positive')] %>%
+  gather(Cases, Count, Death:Positive) %>% 
+  mutate(Cases = factor(Cases, levels = c("Death", "Positive", "Negative")))
 
-plot_ly(data=tn_cases,
-        x= reorder(tn_cases$County, tn_cases$Negative),
-        y=tn_cases$Negative,
-        type='bar',
-        name='Negative Cases',
-        marker= list(color='darkblue')) %>%
-  add_trace(y = tn_cases$Positive,
-            name='Positive Cases',
-            marker = list(color='grey')) %>%
-  add_trace(y = tn_cases$Death,
-            name='Deaths',
-            marker = list(color='#CC0000')) %>%
-  layout(barmode = 'stack',
-         title='Counties with more than 50 cases',
-         xaxis = list(showgrid = FALSE, 
-                      showlilnee = FALSE, 
-                      showticklabels = TRUE,
-                      dtick=1,
-                      tickfont =list(size=10)),
-         yaxis = list(title= 'Count', 
-                      zeroline = FALSE, 
-                      showline = F, 
-                      showticklabels = T, 
-                      showgrid = T),
-         hovermode = 'compare')
+ggplot(tn_cases,aes(x=reorder(County, -Count, sum), y= Count, fill = Cases))+
+  geom_bar(position='stack', stat =  'identity')+
+  xlab('')+
+  theme(panel.background = element_blank(), 
+              axis.line = element_line(), 
+              axis.text = element_text(face = 'bold'),
+              axis.text.x = element_text(angle = 30, h=1),
+              legend.title = element_blank(), 
+              legend.direction='horizontal',
+              legend.position = c(.85,.90),
+              legend.box.just = 'left')+
+  scale_fill_manual(values = c(Death = '#CC0000', Positive = '#002D65', 'Negative' = 'grey')) +
+  scale_y_continuous(labels = scales::comma,breaks = seq(min(tn_cases$Count), max(tn_cases$Count)*1.5, by=2000))
 ```
 
 Data Visualizatons by Demographics
@@ -432,13 +405,14 @@ Column {data-width=350, data-height=450}
 ---------------------------
 ### Confirmed Cases by Age
 ```{r}
-#Get US Census Data
+#Get US Census Demographic Data 
 census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
 
-age_census = readxl::read_excel('census_demographics.xlsx',sheet='Age')
-age_census$Percent = round(age_census$Percent, 1) 
-names(age_census)[3]='Census_Percent'
-#Get TN Data
+age_census = readxl::read_excel('census_demographics.xlsx',sheet='Age') %>% 
+  select(Age, Percent)%>%
+  rename('Census_Percent' = 'Percent') 
+
+#Get TN Cases Data
 tn_age = 'https://myutk.maps.arcgis.com/sharing/rest/content/items/1bdfe86c38514c9c878241d5230d9a85/data'
 
 download.file(tn_age,'TN_Age.xlsx') 
@@ -447,39 +421,32 @@ tn_age =  readxl::read_excel('TN_Age.xlsx',sheet=1) %>%
   top_n(1,DATE) %>%
   select(DATE, AGE, TOT_CASE_COUNT, DEATHS_TOT)
 
+names(tn_age) = c('Date', 'Age', 'Count',  'Deaths')
 
-names(tn_age) = c('Date', 'Age_Ranges', 'Count',  'Deaths')
+tn_age$Age = as.factor(tn_age$Age)
+tn_age$Case_Percent = (tn_age$Count/sum(tn_age$Count))*100
+tn_age$Death_Percent =(tn_age$Deaths/sum(tn_age$Deaths))*100
 
-tn_age$Age_Ranges = as.factor(tn_age$Age_Ranges)
-tn_age$Case_Percent = round((tn_age$Count/sum(tn_age$Count))*100,1)
-tn_age$Death_Percent =round((tn_age$Deaths/sum(tn_age$Deaths))*100,1)
+tn_age = cbind(tn_age[,c('Age', 'Case_Percent','Death_Percent')], age_census[,2])
+tn_age$Census_Percent[10] = NA
 
+tn_age = tidyr::gather(tn_age,'Percent', 'Value', -Age)
 
+fills = c('Case_Percent' = '#002D65', 'Death_Percent' = '#CC0000', 'Census_Percent' = 'grey')
 
-tn_age = tn_age[,c('Age_Ranges', 'Case_Percent','Death_Percent')] %>%
-  tidyr::gather('Percent', 'Value', -Age_Ranges)
-
-tn_age = cbind(tn_age, age_census[,3])
-tn_age$Census_Percent[c(10,20)] = NA
-
-#Plot
-fills = c('Case_Percent' = '#002D65', 'Death_Percent' = '#CC0000', 'Overall Population' = 'grey')
-
-ggplot(tn_age,aes(x=Age_Ranges))+
+ggplot(tn_age,aes(x=Age))+
   geom_col(aes(y = Value, fill=Percent),position=position_dodge())+
-  geom_line(aes(y=Census_Percent, group = 1, color='population',), linetype = 'dashed')+
   xlab('')+
   ylab('Percent')+
   theme(panel.background = element_blank(), 
         axis.line = element_line(), 
         axis.text = element_text(face = 'bold'),
-        axis.text.x = element_text(angle=30),
-        legend.title = element_blank(), 
-        legend.direction='horizontal',
+        axis.text.x = element_text(angle=30, h=1),
+        legend.title = element_blank(),
         legend.position = c(.2,.90),
         legend.box.just = 'left')+
-  scale_fill_manual(values= fills, labels=c('Cases', 'Deaths'))+
-  scale_color_manual(values = c('population' = 'black'),labels = 'Overall Population')
+  scale_fill_manual(values= fills, labels=c('Percent Cases', 'Percent Population', 'Percent Deaths'))
+
 ```
 
 ### Confirmed Cases by Sex
@@ -487,10 +454,10 @@ ggplot(tn_age,aes(x=Age_Ranges))+
 #Get US Census Data
 census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
 
-sex_census = readxl::read_excel('census_demographics.xlsx',sheet='Sex')
-names(sex_census) = c('Sex', 'Census_Percent')
+sex_census = readxl::read_excel('census_demographics.xlsx',sheet='Sex') %>% 
+  rename('Census_Percent' = 'Percent')
 
-##stopped here####
+#Get TN Cases Data
 tn_demo = 'https://myutk.maps.arcgis.com/sharing/rest/content/items/4ff6b762d64a4e0caa626df00a76c902/data'
 
 download.file(tn_demo,'TN_Demographics.xlsx') 
@@ -504,24 +471,25 @@ tn_sex = tn_demo[[2]] %>%
   select(DETAIL, TOT_CASE_COUNT)
 
 names(tn_sex) = c('Sex', 'Count')
-tn_sex$Case_Percent = round((tn_sex$Count/sum(tn_sex$Count))*100,1)
+tn_sex$Case_Percent = (tn_sex$Count/sum(tn_sex$Count))*100
 
-tn_sex = dplyr::left_join(tn_sex[,c(1,3)], sex_census, 'Sex') 
+tn_sex = dplyr::left_join(tn_sex[,c(1,3)], sex_census, 'Sex') %>%
+  gather('Percent', 'Value', -Sex)
+
+
+fills = c('Case_Percent' = '#002D65', 'Census_Percent' = 'grey')
 
 ggplot(data=tn_sex, aes(x=Sex))+
-  geom_col(aes(y=Case_Percent),fill='#002D65')+
-  geom_line(aes(y=Census_Percent, group=1, color='population'), linetype = 'dashed')+
+  geom_col(aes(y=Value,fill=Percent), position=position_dodge())+
   xlab('')+
   ylab('Percent')+
   theme(panel.background = element_blank(), 
         axis.line = element_line(), 
         axis.text = element_text(face = 'bold'),
         legend.title = element_blank(), 
-        legend.direction='horizontal',
         legend.position = c(.85,.90),
         legend.box.just = 'left')+
-  scale_color_manual(values = c('population' = 'black'),labels = 'Overall Population')
-
+  scale_fill_manual(values= fills, labels=c('Percent Cases', 'Percent Population'))
 ```
 
 
@@ -536,22 +504,22 @@ census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/ma
 
 race_census = readxl::read_excel('census_demographics.xlsx',sheet='Race') %>% 
   select(Race = Race, Census_Percent =Percent)
-race_census$Census_Percent = round(race_census$Census_Percent, 1)
-
 
 #Get TN Data
 tn_race = tn_demo[[3]] %>% 
   select(DETAIL, TOT_CASE_COUNT)
 
 names(tn_race) = c('Race', 'Count')
-tn_race$Percent = round((tn_race$Count/sum(tn_race$Count))*100,1)
+tn_race$Case_Percent = (tn_race$Count/sum(tn_race$Count))*100
 
 tn_race = dplyr::left_join(tn_race[,c(1,3)], race_census, 'Race')
 tn_race$Race = factor(tn_race$Race, levels = c('Asian', 'Black or African American', 'White', 'Other/Two or More Races', 'Pending'))
+tn_race = tidyr::gather(tn_race, 'Percent', 'Value', -Race)
+
+fills = c('Case_Percent' = '#002D65', 'Census_Percent' = 'grey')
 
 ggplot(data=tn_race, aes(x=Race))+
-  geom_bar(stat = 'identity',aes(y=Percent),fill='#002D65')+
-  geom_line(aes(y=Census_Percent, group=1, color='population'), linetype = 'dashed')+
+  geom_col(aes(y=Value, fill=Percent), position=position_dodge())+
   xlab('')+
   ylab('Percent')+
   theme(panel.background = element_blank(), 
@@ -559,10 +527,9 @@ ggplot(data=tn_race, aes(x=Race))+
         axis.text = element_text(face = 'bold'),
         axis.text.x = element_text(angle=30, h = 1),
         legend.title = element_blank(), 
-        legend.direction='horizontal',
         legend.position = c(.85,.90),
         legend.box.just = 'left')+
-  scale_color_manual(values = c('population' = 'black'),labels = 'Overall Population')
+  scale_fill_manual(values= fills, labels=c('Percent Cases', 'Percent Population'))
 ```
 
 ### Confirmed Cases by Ethnicity
@@ -570,24 +537,22 @@ ggplot(data=tn_race, aes(x=Race))+
 #Get US Census Data
 census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
 
-eth_census = readxl::read_excel('census_demographics.xlsx',sheet='Ethnicity') %>% 
-  select(Ethnicity = Ethnicity, Census_Percent =Percent)
-eth_census$Census_Percent = round(eth_census$Census_Percent, 1)
+eth_census = readxl::read_excel('census_demographics.xlsx',sheet='Ethnicity') %>% select(Ethnicity=Ethnicity,Census_Percent =Percent)
 
-
-
+#Get Tn Case data
 tn_eth = tn_demo[[1]] %>% 
   select(DETAIL, TOT_CASE_COUNT)
 
 names(tn_eth) = c('Ethnicity', 'Count')
-tn_eth$Percent = tn_eth$Count/sum(tn_eth$Count)*100
+tn_eth$Case_Percent = tn_eth$Count/sum(tn_eth$Count)*100
 
 tn_eth = dplyr::left_join(tn_eth[,c(1,3)], eth_census, 'Ethnicity')
 tn_eth$Ethnicity = factor(tn_eth$Ethnicity, levels = c('Hispanic or Latino','Not Hispanic or Latino', 'Pending'))
+tn_eth = tidyr::gather(tn_eth, 'Percent', 'Value', -Ethnicity)
 
+fills = c('Case_Percent' = '#002D65', 'Census_Percent' = 'grey')
 ggplot(data=tn_eth, aes(x=Ethnicity))+
-  geom_bar(stat = 'identity',aes(y=Percent),fill='#002D65')+
-  geom_line(aes(y=Census_Percent, group=1, color='population'), linetype = 'dashed')+
+  geom_col(aes(y=Value, fill=Percent), position = position_dodge())+
   xlab('')+
   ylab('Percent')+
   theme(panel.background = element_blank(), 
@@ -595,17 +560,10 @@ ggplot(data=tn_eth, aes(x=Ethnicity))+
         axis.text = element_text(face = 'bold'),
         axis.text.x = element_text(angle=30, h = 1),
         legend.title = element_blank(), 
-        legend.direction='horizontal',
         legend.position = c(.85,.90),
         legend.box.just = 'left')+
-  scale_color_manual(values = c('population' = 'black'),labels = 'Overall Population')
+  scale_fill_manual(values= fills, labels=c('Percent Cases', 'Percent Population'))
 ```
-
-
-Row
-----
-These visualizations compare the demographics of COVID Cases to the Census percents. Bars represent the percent of cases and the dashed line represents the census percents for each category in the state of Tennessee. Bars that are under the line suggest those demographic groups are affected by COVID less than their state percent. Similarly, bars crossing the line suggest those demographic populations are affected more than their proportion of the state population.For example, it has been reported that males are more affected than females. In Tennessee, it appears that case percents are proportional to the sexes. There are more females in the state of Tennessee, and we see more cases of females positively diagnosed with COVID.  
-
 
 
 About 
