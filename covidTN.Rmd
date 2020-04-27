@@ -202,7 +202,7 @@ gauge(death_per, min=0, max = 100, symbol = '%',
 ```
 
 
-Column {data-width=650}
+Column {}
 -----------------------------------------------------------------------
 
 ### Cases across time in most populous counties
@@ -215,7 +215,7 @@ tn_top = tn[ tn$county %in% tn_top,]
 
 t_line = tn_pop_line =ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
-  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
+  scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%b %d')+
   labs(x='', y='Cases')+
   theme(legend.title = element_blank(), panel.background = element_blank(), axis.line.x=element_line(), axis.line.y.left = element_line(), axis.text=element_text(face='bold'),axis.text.x = element_text(angle=45, hjust=1))+
   scale_color_brewer(palette = 'Spectral',direction=-1)
@@ -242,6 +242,23 @@ ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
         legend.justification = c(-0.1,.8))+
   scale_color_brewer(palette = 'Spectral',direction=-1)
 ```
+
+### Logarithm - Cases in populous counties
+```{r}
+tn_top =c('Shelby', 'Davidson', 'Knox', 'Hamilton', 'Rutherford', 'Williamson')
+tn_top = tn[ tn$county %in% tn_top,]
+
+
+ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
+  geom_line(size=1)+
+  scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%b %d')+
+  labs(x='', y='Cases')+
+  theme(legend.title = element_blank(), panel.background = element_blank(), axis.line.x=element_line(), axis.line.y.left = element_line(), axis.text=element_text(face='bold'),axis.text.x = element_text(angle=45, hjust=1))+
+  scale_color_brewer(palette = 'Spectral',direction=-1)+
+  scale_y_log10(breaks=scales::trans_breaks('log10', function(x) 10^x),labels = scales::trans_format('log10', scales::math_format(10^.x)))+annotation_logticks()
+
+```
+
 
 Row {data-width=400}
 -------------------------
