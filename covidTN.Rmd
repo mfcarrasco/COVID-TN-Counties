@@ -96,8 +96,8 @@ names(tn_pop) = c('county', 'population')
 tn = left_join(tn, tn_pop, by='county')
 tn$county = as.factor(tn$county)
 
-#Calculate per million
-tn['cases_per_million'] = (tn$cases/tn$population)*10^6
+#Calculate per 10,000 residents
+tn['cases_per_tenk'] = (tn$cases/tn$population)*10^4
 #Tn dataframe is ready for long term data visualiations and includes standardization by population.
 
 
@@ -266,9 +266,9 @@ fig <- plot_ly() %>%
     type='choroplethmapbox',
     geojson= json_file,
     locations=tn_geo$fips,
-    z = tn_geo$cases_per_million,
+    z = tn_geo$cases_per_tenk,
     zmin=0,
-    zmax = round(max(tn_geo$cases_per_million),-3),
+    zmax = round(max(tn_geo$cases_per_tenk),-3),
     colorscale='Viridis',
     marker=list(line=list(
       width=0),
@@ -277,7 +277,7 @@ fig <- plot_ly() %>%
     style="carto-positron",
     zoom =5.05,
     center=list(lon= -86.7816, lat=36.1627))) %>%
-  colorbar(title = "Cases per million") 
+  colorbar(title = "Cases per 10,000") 
 fig
 
 ```
