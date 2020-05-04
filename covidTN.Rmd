@@ -133,8 +133,6 @@ active_cases = total_cases - total_death - total_recov #sum(tn_ext$ACTIVE_TOT)
 
 total_tests = total_cases + total_negative
 
-
-
 ```
 
 Data Visualizations by County
@@ -414,6 +412,103 @@ ggplot(tn_cases,aes(x=reorder(County, -Count, sum), y= Count, fill = Cases))+
   scale_fill_manual(values = c(Death = '#CC0000', Positive = '#002D65', 'Negative' = 'grey')) +
   scale_y_continuous(labels = scales::comma,breaks = seq(min(tn_cases$Count), max(tn_cases$Count)*1.5, by=2000))
 ```
+
+Column {data-width=350, data-height=400}
+----------------------------------------------------------------------
+
+### Change of New Cases in Tennessee
+Previous 4 Weeks
+
+```{r}
+#Moving Average function
+ma = function(x, n=7){
+  stats::filter(x, 
+                rep(1/n, n), 
+                sides = 2)} 
+#Data frame for Tennessee by county that goes back four weeks
+tn_delta =  readxl::read_excel('TN_COVID19_COUNTYDaily.xlsx',sheet=1) %>%
+  select(DATE:RATE_CHG_1DAY,RECOV_TOT:ACTIVE_NEW) %>%
+  mutate(DATE = as.Date(DATE)) %>%
+  filter(DATE >= (Sys.Date()-28))%>%
+  filter(COUNTY != 'Balance') %>%
+  mutate(COUNTY = as.factor(ifelse(COUNTY == 'Non-Tennessee Resident',
+                       "Out of TN",
+                       COUNTY))) 
+
+#Data frame for Tennessee total that goes back four weeks
+ 
+total_delta = tn_delta %>%
+  group_by(DATE) %>%
+  summarise(CASES = sum(CASES_TOT, na.rm= T), 
+            ACTIVE = sum(ACTIVE_TOT,na.rm= T), 
+            DEATHS = sum(DEATHS_TOT,na.rm= T), 
+            RECOV = sum(RECOV_TOT, na.rm=T)) %>%
+  mutate(PREV_CASES = lag(CASES, order_by= DATE)) %>%
+  mutate(RATE_CHG_1DAY = (CASES-PREV_CASES)/PREV_CASES) %>%
+  mutate(RATE_CHG_1DAY= ifelse(is.finite(RATE_CHG_1DAY),RATE_CHG_1DAY,0))
+
+#Plot for Tennessee
+colors = c('Tennessee Data' = '#002D65', 'Moving Average' = '#CC0000')
+ggplot(total_delta, aes(x=DATE)) + 
+  geom_line(aes(y=(RATE_CHG_1DAY*100), color= 'Tennessee Data'),size=1)+
+  geom_line(aes(y=ma((RATE_CHG_1DAY*100)) , color = 'Moving Average' ),size = 1,linetype='dashed')+
+  labs(x='', y='Change in Cases (%)')+
+  theme(legend.title = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line.x=element_line(), 
+        axis.line.y.left = element_line(), 
+        axis.text=element_text(face='bold'),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position = c(0,1),
+        legend.justification = c(-0.1,.8))+
+  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
+  scale_color_manual(values = colors)
+```
+
+
+### Change of New Cases in Shelby County
+Previous 4 Weeks
+
+```{r}
+#With moving average for Shelby County:
+colors = c('Shelby County' = '#002D65', 'Moving Average' = '#CC0000')
+ggplot(tn_delta[which(tn_delta$COUNTY=='Shelby'),], aes(x=DATE)) + 
+  geom_line(aes(y=(RATE_CHG_1DAY*100), color= 'Shelby County'),size=1)+
+  geom_line(aes(y=ma((RATE_CHG_1DAY*100)) , color = 'Moving Average' ),size = 1,linetype='dashed')+
+  labs(x='', y='Change in Cases (%)')+
+  theme(legend.title = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line.x=element_line(), 
+        axis.line.y.left = element_line(), 
+        axis.text=element_text(face='bold'),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position = c(0,1),
+        legend.justification = c(-0.1,.8))+
+  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
+  scale_color_manual(values = colors)
+```
+
+### Change of New Cases in Davidson County
+Previous 4 Weeks
+```{r}
+#Moving Average for Davidson County
+colors = c('Davidson County' = '#002D65', 'Moving Average' = '#CC0000')
+ggplot(tn_delta[which(tn_delta$COUNTY=='Davidson'),], aes(x=DATE)) + 
+  geom_line(aes(y=(RATE_CHG_1DAY*100), color= 'Davidson County'),size=1)+
+  geom_line(aes(y=ma((RATE_CHG_1DAY*100)) , color = 'Moving Average' ),size = 1,linetype='dashed')+
+  labs(x='', y='Change in Cases (%)')+
+  theme(legend.title = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line.x=element_line(), 
+        axis.line.y.left = element_line(), 
+        axis.text=element_text(face='bold'),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position = c(0,1),
+        legend.justification = c(-0.1,.8))+
+  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
+  scale_color_manual(values = colors)
+```
+
 
 Data Visualizatons by Demographics
 ==================================
