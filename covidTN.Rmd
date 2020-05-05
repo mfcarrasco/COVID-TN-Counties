@@ -70,7 +70,7 @@ tn_daily$County = as.factor(tn_daily$County)
 #Merge NYT and Tn Daily dataframes####
 tn_daily2 = tn_daily[,c('Date','County', 'Positive', 'Death')]
 names(tn_daily2) = c('date','county', 'cases', 'deaths')
-tn_daily2 = tn_daily2[!(tn_daily2$county =='Out of TN' | tn_daily2$county =='Pending'),]
+tn_daily2 = tn_daily2[!(tn_daily2$county =='Out of TN' | tn_daily2$county =='Pending' | tn_daily2$county == 'Probable'),]
 tn_daily2 = tibble::add_column(tn_daily2, state = 'Tennessee', .after='county')
 
 fips_daily =tn %>% group_by(county, fips) %>% tally()
