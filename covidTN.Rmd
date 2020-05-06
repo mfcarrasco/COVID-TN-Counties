@@ -215,7 +215,12 @@ t_line = tn_pop_line =ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
   scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%b %d')+
   labs(x='', y='Cases')+
-  theme(legend.title = element_blank(), panel.background = element_blank(), axis.line.x=element_line(), axis.line.y.left = element_line(), axis.text=element_text(face='bold'),axis.text.x = element_text(angle=45, hjust=1))+
+  theme(legend.title = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text=element_text(face='bold'),
+        axis.text.x = element_text(angle=45, hjust=1))+
   scale_color_brewer(palette = 'Spectral',direction=-1)
 ggplotly(t_line)
 ```
@@ -231,9 +236,9 @@ ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%m-%d')+
   labs(x='', y='Cases')+
   theme(legend.title = element_blank(), 
-        panel.background = element_blank(),
-        axis.line.x=element_line(), 
-        axis.line.y.left = element_line(), 
+        panel.background = element_blank(), 
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
         legend.position = c(0,.9),
@@ -251,9 +256,14 @@ ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
   scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%b %d')+
   labs(x='', y='Cases')+
-  theme(legend.title = element_blank(), panel.background = element_blank(), axis.line.x=element_line(), axis.line.y.left = element_line(), axis.text=element_text(face='bold'),axis.text.x = element_text(angle=45, hjust=1))+
+  theme(legend.title = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text=element_text(face='bold'),
+        axis.text.x = element_text(angle=45, hjust=1))+
   scale_color_brewer(palette = 'Spectral',direction=-1)+
-  scale_y_log10(breaks=scales::trans_breaks('log10', function(x) 10^x))+annotation_logticks()
+  scale_y_log10(breaks=scales::trans_breaks('log10', function(x) 10^x))#+annotation_logticks()
 
 ```
 
@@ -325,7 +335,7 @@ plot_ly(data=tn_cases,
                       zeroline = FALSE, 
                       showline = F, 
                       showticklabels = T, 
-                      showgrid = T),
+                      showgrid = F),
          yaxis = list(showgrid = FALSE, 
                       showline = FALSE, 
                       showticklabels = TRUE,
@@ -333,7 +343,7 @@ plot_ly(data=tn_cases,
                       tickfont = list(size=10)))
 ```
 
-### Positive cases by county {.mobile}
+### Positive cases by counties with more than 20 cases {.mobile}
 
 ```{r}
 tn_cases = tn_daily[which(tn_daily$Positive > 20 & 
@@ -343,14 +353,11 @@ tn_cases = tn_daily[which(tn_daily$Positive > 20 &
 
 ggplot(data=tn_cases,aes(x=Positive, y=reorder(County,Positive)))+
   geom_col(fill='#002D65')+
-  ylab('')+
-  xlab('')+
-  theme(panel.background = element_blank(),
-        axis.line.x=element_line(), 
-        axis.line.y.left = element_line(), 
-        axis.text=element_text(face='bold'), 
+  theme(legend.title = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line = element_blank(),
         axis.ticks = element_blank())+
-  scale_x_continuous(expand= c(0,0))+
+  scale_x_continuous(expand= c(0,0))+ 
   ggtitle("Counties with more than 20 cases")
 ```
 
@@ -384,11 +391,11 @@ plot_ly(data=tn_cases,
                               zeroline = FALSE, 
                               showline = F, 
                               showticklabels = T, 
-                              showgrid = T),
+                              showgrid = F),
                  hovermode = 'compare')
 ```
 
-### All Cases by County {.mobile}
+### All outcomes by counties with more than 50 cases {.mobile}
 
 ```{r}
 tn_cases = tn_daily[which(tn_daily$Positive > 50 & 
@@ -401,11 +408,12 @@ tn_cases = tn_daily[which(tn_daily$Positive > 50 &
 ggplot(tn_cases,aes(x=reorder(County, -Count, sum), y= Count, fill = Cases))+
   geom_bar(position='stack', stat =  'identity')+
   xlab('')+
-  theme(panel.background = element_blank(), 
-              axis.line = element_line(), 
+  theme(legend.title = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
               axis.text = element_text(face = 'bold'),
               axis.text.x = element_text(angle = 30, h=1),
-              legend.title = element_blank(), 
               legend.direction='horizontal',
               legend.position = c(.85,.90),
               legend.box.just = 'left')+
@@ -455,8 +463,8 @@ ggplot(total_delta, aes(x=DATE)) +
   labs(x='', y='Change in Cases (%)')+
   theme(legend.title = element_blank(), 
         panel.background = element_blank(), 
-        axis.line.x=element_line(), 
-        axis.line.y.left = element_line(), 
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
         legend.position = c(0,1),
@@ -478,8 +486,8 @@ ggplot(tn_delta[which(tn_delta$COUNTY=='Shelby'),], aes(x=DATE)) +
   labs(x='', y='Change in Cases (%)')+
   theme(legend.title = element_blank(), 
         panel.background = element_blank(), 
-        axis.line.x=element_line(), 
-        axis.line.y.left = element_line(), 
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
         legend.position = c(0,1),
@@ -499,8 +507,8 @@ ggplot(tn_delta[which(tn_delta$COUNTY=='Davidson'),], aes(x=DATE)) +
   labs(x='', y='Change in Cases (%)')+
   theme(legend.title = element_blank(), 
         panel.background = element_blank(), 
-        axis.line.x=element_line(), 
-        axis.line.y.left = element_line(), 
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
         legend.position = c(0,1),
@@ -542,22 +550,25 @@ tn_age$Death_Percent =(tn_age$Deaths/sum(tn_age$Deaths))*100
 tn_age = cbind(tn_age[,c('Age', 'Case_Percent','Death_Percent')], age_census[,2])
 tn_age$Census_Percent[10] = NA
 
-tn_age = tidyr::gather(tn_age,'Percent', 'Value', -Age)
-
 fills = c('Case_Percent' = '#002D65', 'Death_Percent' = '#CC0000', 'Census_Percent' = 'grey')
 
 ggplot(tn_age,aes(x=Age))+
-  geom_col(aes(y = Value, fill=Percent),position=position_dodge())+
-  xlab('')+
-  ylab('Percent')+
+  geom_col(aes(y = Census_Percent, fill='Census_Percent'),width = .75)+
+  geom_col(aes(y = Case_Percent, fill= 'Case_Percent'),width = .5)+
+  geom_col(aes(y = Death_Percent, fill='Death_Percent'),width = .1)+
   theme(panel.background = element_blank(), 
-        axis.line = element_line(), 
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.line = element_blank(), 
         axis.text = element_text(face = 'bold'),
-        axis.text.x = element_text(angle=30, h=1),
+        axis.text.x = element_text(angle=30),
         legend.title = element_blank(),
         legend.position = c(.2,.90),
         legend.box.just = 'left')+
-  scale_fill_manual(values= fills, labels=c('Percent Cases', 'Percent Population', 'Percent Deaths'))
+  scale_fill_manual(breaks=c('Census_Percent', 'Case_Percent', 'Death_Percent'),
+                    values=fills,
+                    labels=c('Population %', 'Cases %', 'Deaths %'))
+
 
 ```
 
@@ -580,30 +591,30 @@ tn_demo =  readxl::read_excel('TN_Demographics.xlsx',sheet=1) %>%
   group_split(TYPE)
 
 tn_sex = tn_demo[[2]] %>% 
-  select(DETAIL, TOT_CASE_COUNT)
+  select(DETAIL, TOT_CASE_COUNT) 
 
 names(tn_sex) = c('Sex', 'Count')
 tn_sex$Case_Percent = (tn_sex$Count/sum(tn_sex$Count))*100
 
-tn_sex = dplyr::left_join(tn_sex[,c(1,3)], sex_census, 'Sex') %>%
-  gather('Percent', 'Value', -Sex)
-
+tn_sex = dplyr::left_join(tn_sex[,c(1,3)], sex_census, 'Sex') 
 
 fills = c('Case_Percent' = '#002D65', 'Census_Percent' = 'grey')
 
 ggplot(data=tn_sex, aes(x=Sex))+
-  geom_col(aes(y=Value,fill=Percent), position=position_dodge())+
-  xlab('')+
-  ylab('Percent')+
-  theme(panel.background = element_blank(), 
-        axis.line = element_line(), 
+  geom_col(aes(y=Census_Percent,fill='Census_Percent'), width=.75)+
+  geom_col(aes(y=Case_Percent,fill='Case_Percent'), width=.5)+
+  theme(axis.title = element_blank(),
+        panel.background = element_blank(), 
+        axis.line = element_blank(), 
+        axis.ticks = element_blank(),
         axis.text = element_text(face = 'bold'),
         legend.title = element_blank(), 
         legend.position = c(.85,.90),
         legend.box.just = 'left')+
-  scale_fill_manual(values= fills, labels=c('Percent Cases', 'Percent Population'))
+  scale_fill_manual(breaks=c('Census_Percent', 'Case_Percent'),
+                    values=fills,
+                    labels=c('Population %', 'Cases %'))
 ```
-
 
 
 Column {data-width=350, data-height=450}
@@ -625,23 +636,26 @@ names(tn_race) = c('Race', 'Count')
 tn_race$Case_Percent = (tn_race$Count/sum(tn_race$Count))*100
 
 tn_race = dplyr::left_join(tn_race[,c(1,3)], race_census, 'Race')
-tn_race$Race = factor(tn_race$Race, levels = c('Asian', 'Black or African American', 'White', 'Other/Two or More Races', 'Pending'))
-tn_race = tidyr::gather(tn_race, 'Percent', 'Value', -Race)
+tn_race$Race = factor(tn_race$Race, levels = c('Asian', 'Black or African American', 'White', 'Other/Multiracial', 'Pending'))
+#tn_race = tidyr::gather(tn_race, 'Percent', 'Value', -Race)
 
 fills = c('Case_Percent' = '#002D65', 'Census_Percent' = 'grey')
 
 ggplot(data=tn_race, aes(x=Race))+
-  geom_col(aes(y=Value, fill=Percent), position=position_dodge())+
-  xlab('')+
-  ylab('Percent')+
+  geom_col(aes(y=Census_Percent, fill='Census_Percent'), width = .75)+
+  geom_col(aes(y=Case_Percent, fill='Case_Percent'), width = .5)+
   theme(panel.background = element_blank(), 
-        axis.line = element_line(), 
+        axis.line = element_blank(), 
+        axis.title=element_blank(),
+        axis.ticks = element_blank(),
         axis.text = element_text(face = 'bold'),
-        axis.text.x = element_text(angle=30, h = 1),
+        axis.text.x = element_text(angle=30, h=1),
         legend.title = element_blank(), 
         legend.position = c(.85,.90),
         legend.box.just = 'left')+
-  scale_fill_manual(values= fills, labels=c('Percent Cases', 'Percent Population'))
+  scale_fill_manual(breaks=c('Census_Percent', 'Case_Percent'),
+                    values=fills,
+                    labels=c('Population %', 'Cases %'))
 ```
 
 ### Confirmed Cases by Ethnicity
@@ -653,28 +667,33 @@ eth_census = readxl::read_excel('census_demographics.xlsx',sheet='Ethnicity') %>
 
 #Get Tn Case data
 tn_eth = tn_demo[[1]] %>% 
-  select(DETAIL, TOT_CASE_COUNT)
+  select(DETAIL, TOT_CASE_COUNT) %>%
+  mutate(DETAIL = ifelse(DETAIL == 'Hispanic',
+                         'Hispanic or Latino',
+                         DETAIL))
 
 names(tn_eth) = c('Ethnicity', 'Count')
 tn_eth$Case_Percent = tn_eth$Count/sum(tn_eth$Count)*100
 
 tn_eth = dplyr::left_join(tn_eth[,c(1,3)], eth_census, 'Ethnicity')
 tn_eth$Ethnicity = factor(tn_eth$Ethnicity, levels = c('Hispanic or Latino','Not Hispanic or Latino', 'Pending'))
-tn_eth = tidyr::gather(tn_eth, 'Percent', 'Value', -Ethnicity)
 
 fills = c('Case_Percent' = '#002D65', 'Census_Percent' = 'grey')
 ggplot(data=tn_eth, aes(x=Ethnicity))+
-  geom_col(aes(y=Value, fill=Percent), position = position_dodge())+
-  xlab('')+
-  ylab('Percent')+
+  geom_col(aes(y=Census_Percent, fill='Census_Percent'), width = .75)+
+  geom_col(aes(y=Case_Percent, fill='Case_Percent'), width = .5)+
   theme(panel.background = element_blank(), 
-        axis.line = element_line(), 
+        axis.line = element_blank(), 
+        axis.title=element_blank(),
+        axis.ticks = element_blank(),
         axis.text = element_text(face = 'bold'),
-        axis.text.x = element_text(angle=30, h = 1),
+        axis.text.x = element_text(angle=30, h=1),
         legend.title = element_blank(), 
         legend.position = c(.85,.90),
         legend.box.just = 'left')+
-  scale_fill_manual(values= fills, labels=c('Percent Cases', 'Percent Population'))
+  scale_fill_manual(breaks=c('Census_Percent', 'Case_Percent'),
+                    values=fills,
+                    labels=c('Population %', 'Cases %'))
 ```
 
 
