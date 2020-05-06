@@ -424,8 +424,7 @@ ggplot(tn_cases,aes(x=reorder(County, -Count, sum), y= Count, fill = Cases))+
 Column {data-width=350, data-height=400}
 ----------------------------------------------------------------------
 
-### Change of New Cases in Tennessee
-Previous 4 Weeks
+### Change of New Cases in Tennessee - 4 Weeks
 
 ```{r}
 #Moving Average function
@@ -475,8 +474,6 @@ ggplot(total_delta, aes(x=DATE)) +
 
 
 ### Change of New Cases in Shelby County
-Previous 4 Weeks
-
 ```{r}
 #With moving average for Shelby County:
 colors = c('Shelby County' = '#002D65', 'Moving Average' = '#CC0000')
@@ -497,7 +494,6 @@ ggplot(tn_delta[which(tn_delta$COUNTY=='Shelby'),], aes(x=DATE)) +
 ```
 
 ### Change of New Cases in Davidson County
-Previous 4 Weeks
 ```{r}
 #Moving Average for Davidson County
 colors = c('Davidson County' = '#002D65', 'Moving Average' = '#CC0000')
