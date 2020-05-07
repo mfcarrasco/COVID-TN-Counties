@@ -413,7 +413,7 @@ ggplot(tn_cases,aes(x=reorder(County, -Count, sum), y= Count, fill = Cases))+
         axis.line = element_blank(),
         axis.ticks = element_blank(),
               axis.text = element_text(face = 'bold'),
-              axis.text.x = element_text(angle = 30, h=1),
+              axis.text.x = element_text(angle = 90, h=1),
               legend.direction='horizontal',
               legend.position = c(.85,.90),
               legend.box.just = 'left')+
@@ -421,7 +421,7 @@ ggplot(tn_cases,aes(x=reorder(County, -Count, sum), y= Count, fill = Cases))+
   scale_y_continuous(labels = scales::comma,breaks = seq(min(tn_cases$Count), max(tn_cases$Count)*1.5, by=2000))
 ```
 
-Column {data-width=350, data-height=400}
+Column {data-height=400}
 ----------------------------------------------------------------------
 
 ### Change of New Cases in Tennessee - 4 Weeks
