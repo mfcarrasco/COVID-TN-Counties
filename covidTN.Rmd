@@ -1,14 +1,14 @@
 ---
 title: "COVID-19 | Tennessee"
 output:
-    flexdashboard::flex_dashboard:
-      orientation: rows
-      vertical_layout: scroll
-      social: menu
-      source_code: embed
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    social: menu
+    source_code: embed
 knit: (function(input_file, encoding) {
-  out_dir <- 'docs';
-  rmarkdown::render(input_file,
+ out_dir <- 'docs';
+ rmarkdown::render(input_file,
  encoding=encoding,
  output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
 ---
@@ -133,6 +133,8 @@ active_cases = total_cases - total_death - total_recov #sum(tn_ext$ACTIVE_TOT)
 
 total_tests = total_cases + total_negative
 
+ks = function(x) {scales::number_format(accuracy = 1, scale = 1/1000, suffix = 'K')(x)}
+
 ```
 
 Data Visualizations by County
@@ -214,8 +216,9 @@ tn_top = tn[ tn$county %in% tn_top,]
 t_line = tn_pop_line =ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
   scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%b %d')+
+  scale_y_continuous(labels = ks)+
   labs(x='', y='Cases')+
-  theme(legend.title = element_blank(), 
+  theme(legend.position = 'none', 
         panel.background = element_blank(), 
         axis.line = element_blank(),
         axis.ticks = element_blank(),
@@ -234,6 +237,7 @@ tn_top = tn[ tn$county %in% tn_top,]
 ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
   scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%m-%d')+
+  scale_y_continuous(labels = ks)+
   labs(x='', y='Cases')+
   theme(legend.title = element_blank(), 
         panel.background = element_blank(), 
@@ -252,7 +256,7 @@ tn_top =c('Shelby', 'Davidson', 'Knox', 'Hamilton', 'Rutherford', 'Williamson')
 tn_top = tn[ tn$county %in% tn_top,]
 
 
-ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
+logplot = ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
   scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%b %d')+
   labs(x='', y='Cases')+
@@ -263,10 +267,32 @@ ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1))+
   scale_color_brewer(palette = 'Spectral',direction=-1)+
-  scale_y_log10(breaks=scales::trans_breaks('log10', function(x) 10^x))#+annotation_logticks()
-
+  scale_y_log10(breaks=scales::trans_breaks('log10', function(x) 10^x))
+ggplotly(logplot)
 ```
 
+### Logarithm - Cases in populous counties {.mobile}
+```{r}
+tn_top =c('Shelby', 'Davidson', 'Knox', 'Hamilton', 'Rutherford', 'Williamson')
+tn_top = tn[ tn$county %in% tn_top,]
+
+
+ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
+  geom_line(size=1)+
+  scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%b %d')+
+  labs(x='', y='Cases')+
+  theme(legend.title = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text=element_text(face='bold'),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position = c(0,.9),
+        legend.justification = c(-0.1,.8))+
+  scale_color_brewer(palette = 'Spectral',direction=-1)+
+  scale_y_log10(breaks=scales::trans_breaks('log10', function(x) 10^x))
+
+```
 
 Row {data-width=400}
 -------------------------
@@ -315,10 +341,10 @@ tn_daily[,2:5] %>%
                 options = list(pageLength = 10))
 ```
 
-Column {data-width=350, data-height=400}
+Column {data-width=350, data-height=460}
 -----------------------------------------------------------------------
 
-### Positive cases by counties with more than 20 cases
+### Positive cases by counties with more than 20 cases {.no-mobile}
 
 ```{r}
 tn_cases = tn_daily[which(tn_daily$Positive >20 & 
@@ -343,23 +369,6 @@ plot_ly(data=tn_cases,
                       tickfont = list(size=10)))
 ```
 
-### Positive cases by counties with more than 20 cases {.mobile}
-
-```{r}
-tn_cases = tn_daily[which(tn_daily$Positive > 20 & 
-                            tn_daily$County != 'Pending'  &
-                            tn_daily$County != 'Out of TN'), 
-                    c('County', 'Positive','Negative','Death')]
-
-ggplot(data=tn_cases,aes(x=Positive, y=reorder(County,Positive)))+
-  geom_col(fill='#002D65')+
-  theme(legend.title = element_blank(), 
-        panel.background = element_blank(), 
-        axis.line = element_blank(),
-        axis.ticks = element_blank())+
-  scale_x_continuous(expand= c(0,0))+ 
-  ggtitle("Counties with more than 20 cases")
-```
 
 
 ### All outcomes by counties with more than 50 cases
@@ -405,20 +414,19 @@ tn_cases = tn_daily[which(tn_daily$Positive > 50 &
   gather(Cases, Count, Death:Positive) %>% 
   mutate(Cases = factor(Cases, levels = c("Death", "Positive", "Negative")))
 
-ggplot(tn_cases,aes(x=reorder(County, -Count, sum), y= Count, fill = Cases))+
+ggplot(tn_cases,aes(y=reorder(County, Count, sum), x= Count, fill = Cases))+
   geom_bar(position='stack', stat =  'identity')+
-  xlab('')+
+  labs(x='Count', y='')+
   theme(legend.title = element_blank(), 
         panel.background = element_blank(), 
         axis.line = element_blank(),
         axis.ticks = element_blank(),
               axis.text = element_text(face = 'bold'),
-              axis.text.x = element_text(angle = 90, h=1),
               legend.direction='horizontal',
-              legend.position = c(.85,.90),
+              legend.position = c(.75,.2),
               legend.box.just = 'left')+
   scale_fill_manual(values = c(Death = '#CC0000', Positive = '#002D65', 'Negative' = 'grey')) +
-  scale_y_continuous(labels = scales::comma,breaks = seq(min(tn_cases$Count), max(tn_cases$Count)*1.5, by=2000))
+  scale_x_continuous(labels = ks,breaks = seq(min(tn_cases$Count), max(tn_cases$Count)*1.5, by=5000))
 ```
 
 Column {data-height=400}
@@ -633,13 +641,13 @@ tn_race$Case_Percent = (tn_race$Count/sum(tn_race$Count))*100
 
 tn_race = dplyr::left_join(tn_race[,c(1,3)], race_census, 'Race')
 tn_race$Race = factor(tn_race$Race, levels = c('Asian', 'Black or African American', 'White', 'Other/Multiracial', 'Pending'))
-#tn_race = tidyr::gather(tn_race, 'Percent', 'Value', -Race)
 
 fills = c('Case_Percent' = '#002D65', 'Census_Percent' = 'grey')
 
-ggplot(data=tn_race, aes(x=Race))+
-  geom_col(aes(y=Census_Percent, fill='Census_Percent'), width = .75)+
-  geom_col(aes(y=Case_Percent, fill='Case_Percent'), width = .5)+
+ggplot(data=tn_race, aes(y=Race))+
+  geom_col(aes(x=Census_Percent, fill='Census_Percent'), width = .75)+
+  geom_col(aes(x=Case_Percent, fill='Case_Percent'), width = .5)+
+  scale_y_discrete(limits = rev(levels(tn_race$Race)))+
   theme(panel.background = element_blank(), 
         axis.line = element_blank(), 
         axis.title=element_blank(),
@@ -675,9 +683,11 @@ tn_eth = dplyr::left_join(tn_eth[,c(1,3)], eth_census, 'Ethnicity')
 tn_eth$Ethnicity = factor(tn_eth$Ethnicity, levels = c('Hispanic or Latino','Not Hispanic or Latino', 'Pending'))
 
 fills = c('Case_Percent' = '#002D65', 'Census_Percent' = 'grey')
-ggplot(data=tn_eth, aes(x=Ethnicity))+
-  geom_col(aes(y=Census_Percent, fill='Census_Percent'), width = .75)+
-  geom_col(aes(y=Case_Percent, fill='Case_Percent'), width = .5)+
+ggplot(data=tn_eth, aes(y=Ethnicity))+
+  geom_col(aes(x=Census_Percent, fill='Census_Percent'), width = .75)+
+  geom_col(aes(x=Case_Percent, fill='Case_Percent'), width = .5)+
+  scale_y_discrete(limits = rev(levels(tn_eth$Ethnicity)), position='right')+
+  scale_x_reverse()+
   theme(panel.background = element_blank(), 
         axis.line = element_blank(), 
         axis.title=element_blank(),
@@ -685,7 +695,7 @@ ggplot(data=tn_eth, aes(x=Ethnicity))+
         axis.text = element_text(face = 'bold'),
         axis.text.x = element_text(angle=30, h=1),
         legend.title = element_blank(), 
-        legend.position = c(.85,.90),
+        legend.position = c(.15,.90),
         legend.box.just = 'left')+
   scale_fill_manual(breaks=c('Census_Percent', 'Case_Percent'),
                     values=fills,
