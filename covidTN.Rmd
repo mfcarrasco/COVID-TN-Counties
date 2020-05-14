@@ -638,6 +638,9 @@ tn_race = tn_demo[[3]] %>%
 
 names(tn_race) = c('Race', 'Count')
 tn_race$Case_Percent = (tn_race$Count/sum(tn_race$Count))*100
+tn_race$Race = ifelse(tn_race$Race == 'Other/Two or More Races', 
+                      'Other/Multiracial', 
+                      tn_race$Race)
 
 tn_race = dplyr::left_join(tn_race[,c(1,3)], race_census, 'Race')
 tn_race$Race = factor(tn_race$Race, levels = c('Asian', 'Black or African American', 'White', 'Other/Multiracial', 'Pending'))
