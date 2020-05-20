@@ -67,6 +67,8 @@ tn_daily$County =ifelse(tn_daily$County == 'VanBuren',
 
 tn_daily$County = as.factor(tn_daily$County)
 
+tn_daily = filter(tn_daily, County !='Probable')
+
 #Merge NYT and Tn Daily dataframes####
 tn_daily2 = tn_daily[,c('Date','County', 'Positive', 'Death')]
 names(tn_daily2) = c('date','county', 'cases', 'deaths')
@@ -594,7 +596,7 @@ tn_demo =  readxl::read_excel('TN_Demographics.xlsx',sheet=1) %>%
   select(DATE, TYPE, DETAIL, TOT_CASE_COUNT) %>%
   group_split(TYPE)
 
-tn_sex = tn_demo[[2]] %>% 
+tn_sex = tn_demo[[3]] %>% 
   select(DETAIL, TOT_CASE_COUNT) 
 
 names(tn_sex) = c('Sex', 'Count')
@@ -633,7 +635,7 @@ race_census = readxl::read_excel('census_demographics.xlsx',sheet='Race') %>%
   select(Race = Race, Census_Percent =Percent)
 
 #Get TN Data
-tn_race = tn_demo[[3]] %>% 
+tn_race = tn_demo[[2]] %>% 
   select(DETAIL, TOT_CASE_COUNT)
 
 names(tn_race) = c('Race', 'Count')
