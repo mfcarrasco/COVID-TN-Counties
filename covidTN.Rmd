@@ -343,7 +343,7 @@ tn_daily[,2:5] %>%
                 options = list(pageLength = 10))
 ```
 
-Column {data-width=350, data-height=460}
+Column {data-width=350, data-height=470}
 -----------------------------------------------------------------------
 
 ### Positive cases by counties with more than 20 cases {.no-mobile}
@@ -580,46 +580,46 @@ ggplot(tn_age,aes(x=Age))+
 
 ### Confirmed Cases by Sex
 ```{r}
-#Get US Census Data
-census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
-
+#Get US Census Demographic Data - Sex
 sex_census = readxl::read_excel('census_demographics.xlsx',sheet='Sex') %>% 
   rename('Census_Percent' = 'Percent')
 
 #Get TN Cases Data
-tn_demo = 'https://myutk.maps.arcgis.com/sharing/rest/content/items/4ff6b762d64a4e0caa626df00a76c902/data'
+tndh_demo = 'https://www.tn.gov/content/dam/tn/health/documents/cedep/novel-coronavirus/datasets/Public-Dataset-RaceEthSex.XLSX'
 
-download.file(tn_demo,'TN_Demographics.xlsx') 
+download.file(tndh_demo,'TNDeptHealth_Demographics.xlsx') 
 
-tn_demo =  readxl::read_excel('TN_Demographics.xlsx',sheet=1) %>% 
-  top_n(1,DATE) %>%
-  select(DATE, TYPE, DETAIL, TOT_CASE_COUNT) %>%
-  group_split(TYPE)
+tndh_demo =  readxl::read_excel('TNDeptHealth_Demographics.xlsx',sheet=1) %>% 
+  top_n(1,Date) %>%
+  group_split(Category)
 
-tn_sex = tn_demo[[3]] %>% 
-  select(DETAIL, TOT_CASE_COUNT) 
+tn_sex = tndh_demo[[3]] %>% 
+  select(-c('Date', 'Category'))
+  
+names(tn_sex) = c('Sex', 'Count', 'Case_Percent', 'Deaths', 'Death_Percent')
 
-names(tn_sex) = c('Sex', 'Count')
-tn_sex$Case_Percent = (tn_sex$Count/sum(tn_sex$Count))*100
+tn_sex = tn_sex %>% 
+  mutate(Case_Percent = Case_Percent*100) %>%
+  mutate(Death_Percent = Death_Percent*100) %>%
+  select(Sex, Case_Percent, Death_Percent) %>%
+  left_join(sex_census, 'Sex')
 
-tn_sex = dplyr::left_join(tn_sex[,c(1,3)], sex_census, 'Sex') 
+fills = c('Case_Percent' = '#002D65', 'Death_Percent' = '#CC0000', 'Census_Percent' = 'grey')
 
-fills = c('Case_Percent' = '#002D65', 'Census_Percent' = 'grey')
-
-ggplot(data=tn_sex, aes(x=Sex))+
-  geom_col(aes(y=Census_Percent,fill='Census_Percent'), width=.75)+
-  geom_col(aes(y=Case_Percent,fill='Case_Percent'), width=.5)+
-  theme(axis.title = element_blank(),
-        panel.background = element_blank(), 
-        axis.line = element_blank(), 
+ggplot(tn_sex,aes(x=Sex))+
+  geom_col(aes(y = Census_Percent, fill='Census_Percent'),width = .75)+
+  geom_col(aes(y = Case_Percent, fill= 'Case_Percent'),width = .5)+
+  geom_col(aes(y = Death_Percent, fill='Death_Percent'),width = .1)+
+  theme(panel.background = element_blank(), 
+        axis.title = element_blank(),
         axis.ticks = element_blank(),
+        axis.line = element_blank(), 
         axis.text = element_text(face = 'bold'),
-        legend.title = element_blank(), 
+        axis.text.x = element_text(angle=30),
+        legend.title = element_blank(),
         legend.position = c(.85,.90),
         legend.box.just = 'left')+
-  scale_fill_manual(breaks=c('Census_Percent', 'Case_Percent'),
-                    values=fills,
-                    labels=c('Population %', 'Cases %'))
+  scale_fill_manual(breaks=c('Census_Percent', 'Case_Percent', 'Death_Percent'),values=fills,labels=c('Population %', 'Cases %', 'Deaths %'))
 ```
 
 
@@ -628,30 +628,29 @@ Column {data-width=350, data-height=450}
 
 ### Confirmed Cases by Race
 ```{r}
-#Get US Census Data
-census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
-
+#Get US Census Demographic Data - Race
 race_census = readxl::read_excel('census_demographics.xlsx',sheet='Race') %>% 
   select(Race = Race, Census_Percent =Percent)
 
-#Get TN Data
-tn_race = tn_demo[[2]] %>% 
-  select(DETAIL, TOT_CASE_COUNT)
+tn_race = tndh_demo[[2]] %>% 
+  select(-c('Date', 'Category'))
+  
+names(tn_race) = c('Race', 'Count', 'Case_Percent', 'Deaths', 'Death_Percent')
 
-names(tn_race) = c('Race', 'Count')
-tn_race$Case_Percent = (tn_race$Count/sum(tn_race$Count))*100
-tn_race$Race = ifelse(tn_race$Race == 'Other/Two or More Races', 
-                      'Other/Multiracial', 
-                      tn_race$Race)
+tn_race = tn_race %>% 
+  mutate(Case_Percent = Case_Percent*100) %>%
+  mutate(Death_Percent = Death_Percent*100) %>%
+  select(Race, Case_Percent, Death_Percent) %>%
+  left_join(race_census, 'Race') %>%
+  mutate(Race = factor(Race, levels = c('Asian', 'Black or African American', 'White', 'Other/Multiracial', 'Pending')))
 
-tn_race = dplyr::left_join(tn_race[,c(1,3)], race_census, 'Race')
-tn_race$Race = factor(tn_race$Race, levels = c('Asian', 'Black or African American', 'White', 'Other/Multiracial', 'Pending'))
 
-fills = c('Case_Percent' = '#002D65', 'Census_Percent' = 'grey')
+fills = c('Case_Percent' = '#002D65', 'Death_Percent' = '#CC0000', 'Census_Percent' = 'grey')
 
-ggplot(data=tn_race, aes(y=Race))+
-  geom_col(aes(x=Census_Percent, fill='Census_Percent'), width = .75)+
-  geom_col(aes(x=Case_Percent, fill='Case_Percent'), width = .5)+
+ggplot(tn_race,aes(y=Race))+
+  geom_col(aes(x = Census_Percent, fill='Census_Percent'),width = .75)+
+  geom_col(aes(x = Case_Percent, fill= 'Case_Percent'),width = .5)+
+  geom_col(aes(x = Death_Percent, fill='Death_Percent'),width = .1)+
   scale_y_discrete(limits = rev(levels(tn_race$Race)))+
   theme(panel.background = element_blank(), 
         axis.line = element_blank(), 
@@ -662,35 +661,35 @@ ggplot(data=tn_race, aes(y=Race))+
         legend.title = element_blank(), 
         legend.position = c(.85,.90),
         legend.box.just = 'left')+
-  scale_fill_manual(breaks=c('Census_Percent', 'Case_Percent'),
-                    values=fills,
-                    labels=c('Population %', 'Cases %'))
+  scale_fill_manual(breaks=c('Census_Percent', 'Case_Percent', 'Death_Percent'),values=fills,labels=c('Population %', 'Cases %', 'Deaths %'))
 ```
 
 ### Confirmed Cases by Ethnicity
 ```{r}
-#Get US Census Data
-census_demo = 'https://raw.githubusercontent.com/mfcarrasco/COVID-TN-Counties/master/census_demographics.xlsx'
+#Get US Census Demographic Data - Ethnicity
+eth_census = readxl::read_excel('census_demographics.xlsx',sheet='Ethnicity') %>% 
+  select(Ethnicity=Ethnicity,Census_Percent =Percent)
 
-eth_census = readxl::read_excel('census_demographics.xlsx',sheet='Ethnicity') %>% select(Ethnicity=Ethnicity,Census_Percent =Percent)
+tn_eth = tndh_demo[[1]] %>% 
+  select(-c('Date', 'Category'))
+  
+names(tn_eth) = c('Ethnicity', 'Count', 'Case_Percent', 'Deaths', 'Death_Percent')
 
-#Get Tn Case data
-tn_eth = tn_demo[[1]] %>% 
-  select(DETAIL, TOT_CASE_COUNT) %>%
-  mutate(DETAIL = ifelse(DETAIL == 'Hispanic',
-                         'Hispanic or Latino',
-                         DETAIL))
+tn_eth = tn_eth %>% 
+  mutate(Ethnicity = ifelse(Ethnicity == 'Hispanic', 'Hispanic or Latino', Ethnicity)) %>% 
+  mutate(Case_Percent = Case_Percent*100) %>%
+  mutate(Death_Percent = Death_Percent*100) %>%
+  select(Ethnicity, Case_Percent, Death_Percent) %>%
+  left_join(eth_census, 'Ethnicity') %>% 
+  mutate(Ethnicity = factor(Ethnicity, levels = c('Hispanic or Latino','Not Hispanic or Latino', 'Pending')))
 
-names(tn_eth) = c('Ethnicity', 'Count')
-tn_eth$Case_Percent = tn_eth$Count/sum(tn_eth$Count)*100
 
-tn_eth = dplyr::left_join(tn_eth[,c(1,3)], eth_census, 'Ethnicity')
-tn_eth$Ethnicity = factor(tn_eth$Ethnicity, levels = c('Hispanic or Latino','Not Hispanic or Latino', 'Pending'))
+fills = c('Case_Percent' = '#002D65', 'Death_Percent' = '#CC0000', 'Census_Percent' = 'grey')
 
-fills = c('Case_Percent' = '#002D65', 'Census_Percent' = 'grey')
-ggplot(data=tn_eth, aes(y=Ethnicity))+
-  geom_col(aes(x=Census_Percent, fill='Census_Percent'), width = .75)+
-  geom_col(aes(x=Case_Percent, fill='Case_Percent'), width = .5)+
+ggplot(tn_eth,aes(y=Ethnicity))+
+  geom_col(aes(x = Census_Percent, fill='Census_Percent'),width = .75)+
+  geom_col(aes(x = Case_Percent, fill= 'Case_Percent'),width = .5)+
+  geom_col(aes(x = Death_Percent, fill='Death_Percent'),width = .1)+
   scale_y_discrete(limits = rev(levels(tn_eth$Ethnicity)), position='right')+
   scale_x_reverse()+
   theme(panel.background = element_blank(), 
@@ -702,28 +701,25 @@ ggplot(data=tn_eth, aes(y=Ethnicity))+
         legend.title = element_blank(), 
         legend.position = c(.15,.90),
         legend.box.just = 'left')+
-  scale_fill_manual(breaks=c('Census_Percent', 'Case_Percent'),
-                    values=fills,
-                    labels=c('Population %', 'Cases %'))
+  scale_fill_manual(breaks=c('Census_Percent', 'Case_Percent', 'Death_Percent'),values=fills,labels=c('Population %', 'Cases %', 'Deaths %'))
 ```
-
 
 About 
 ================================
 
 **The Tennessee Coronavirus Dashboard**    
   
-The sole intention of this Coronavirus dashboard is to provide a visual overview of the 2019 Novel COVID-19 as it relates to counties in Tennessee. The data is acquired from two different sources, and there are no guarantees on the accuracy of the data becaues of differences in numbers reported and reporting time.   
-
-Note: This dashboard has different graphs for small screens. For more interactive graphs, please view this website on a large screen (computer/large table).   
+The sole intention of this Coronavirus dashboard is to provide a visual overview of the 2019 Novel COVID-19 as it relates to counties in Tennessee. This dashboard has different graphs for small screens. For more interactive graphs, please view this website on a larger screen (computer/large tablet).   
 
 
 **Data**
 
-Data for "Cases across time in most populous counties" is a concatenation of the [New York Times Coronavirus Data](https://github.com/nytimes/covid-19-data) and the [Tennessee State Data Center](https://myutk.maps.arcgis.com/home/group.html?id=c98fc99308dd43fb98146d3cf21fc31c&q=tags%3A%22COVID-19%22&view=list&focus=files#content), which acquires its data from the [TN Department of Health](https://www.tn.gov/health/cedep/ncov.html)
+Data is acquired from the [New York Times Coronavirus Data](https://github.com/nytimes/covid-19-data), the [Tennessee State Data Center](https://myutk.maps.arcgis.com/home/group.html?id=c98fc99308dd43fb98146d3cf21fc31c&q=tags%3A%22COVID-19%22&view=list&focus=files#content), and the [Tennessee Department of Health](https://www.tn.gov/health/cedep/ncov.html)
 
-Latest data from `r max(tn$date) %>% format('%m-%d')`.
+Last updated: `r max(tn$date) %>% format('%m-%d')`.
 
 Population data acquired from the [US Census](https://data.census.gov/cedsci/table?q=Tennessee%20race%20demographics&g=0400000US47&tid=ACSDP1Y2018.DP05&hidePreview=true).
 
-Created by [Malle Carrasco-Harris](https://www.linkedin.com/in/malle-carrasco-harris).  
+
+
+Created by [Malle Carrasco-Harris, PhD](https://www.linkedin.com/in/malle-carrasco-harris) using [RStudio Flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/) and associated packages available in the Source Code.
