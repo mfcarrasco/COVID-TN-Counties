@@ -57,6 +57,10 @@ tn_daily$County = ifelse(tn_daily$County == 'Non-Tennessee Resident',
                          "Out of TN",
                          tn_daily$County)
 
+tn_daily$County = ifelse(tn_daily$County == 'Out of State',
+                         "Out of TN",
+                         tn_daily$County)
+
 tn_daily$County =ifelse(tn_daily$County == 'Dekalb', 
                         'DeKalb', 
                         tn_daily$County)
