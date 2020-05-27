@@ -350,10 +350,10 @@ tn_daily[,2:5] %>%
 Column {data-width=350, data-height=470}
 -----------------------------------------------------------------------
 
-### Positive cases by counties with more than 20 cases {.no-mobile}
+### Positive cases by counties with more than 50 cases {.no-mobile}
 
 ```{r}
-tn_cases = tn_daily[which(tn_daily$Positive >20 & 
+tn_cases = tn_daily[which(tn_daily$Positive >50 & 
                             tn_daily$County != 'Pending'  &
                             tn_daily$County != 'Out of TN'), 
                     c('County', 'Positive','Negative','Death')] 
@@ -453,9 +453,11 @@ tn_delta =  readxl::read_excel('TN_COVID19_COUNTYDaily.xlsx',sheet=1) %>%
   filter(DATE >= (Sys.Date()-28))%>%
   filter(COUNTY != 'Balance') %>%
   mutate(COUNTY = as.factor(ifelse(COUNTY == 'Non-Tennessee Resident',
-                       "Out of TN",
-                       COUNTY))) 
-
+                       "Out of TN", 
+                       ifelse(COUNTY == 'Out of State', 
+                              'Out of TN', 
+                              COUNTY))))
+                  
 #Data frame for Tennessee total that goes back four weeks
  
 total_delta = tn_delta %>%
@@ -463,7 +465,8 @@ total_delta = tn_delta %>%
   summarise(CASES = sum(CASES_TOT, na.rm= T), 
             ACTIVE = sum(ACTIVE_TOT,na.rm= T), 
             DEATHS = sum(DEATHS_TOT,na.rm= T), 
-            RECOV = sum(RECOV_TOT, na.rm=T)) %>%
+            RECOV = sum(RECOV_TOT, na.rm=T),
+            CASES_NEW = sum(CASES_NEW, na.rm=T)) %>%
   mutate(PREV_CASES = lag(CASES, order_by= DATE)) %>%
   mutate(RATE_CHG_1DAY = (CASES-PREV_CASES)/PREV_CASES) %>%
   mutate(RATE_CHG_1DAY= ifelse(is.finite(RATE_CHG_1DAY),RATE_CHG_1DAY,0))
@@ -481,6 +484,7 @@ ggplot(total_delta, aes(x=DATE)) +
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
         legend.position = c(0,1),
+        legend.direction = 'horizontal',
         legend.justification = c(-0.1,.8))+
   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
   scale_color_manual(values = colors)
@@ -501,8 +505,7 @@ ggplot(tn_delta[which(tn_delta$COUNTY=='Shelby'),], aes(x=DATE)) +
         axis.ticks = element_blank(),
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
-        legend.position = c(0,1),
-        legend.justification = c(-0.1,.8))+
+        legend.position = 'none')+
   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
   scale_color_manual(values = colors)
 ```
@@ -521,15 +524,81 @@ ggplot(tn_delta[which(tn_delta$COUNTY=='Davidson'),], aes(x=DATE)) +
         axis.ticks = element_blank(),
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
-        legend.position = c(0,1),
-        legend.justification = c(-0.1,.8))+
+        legend.position = 'none')+
   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
   scale_color_manual(values = colors)
 ```
 
+Column {data-height=400}
+----------------------------------------------------------------------
+
+### New Cases in Tennessee - 4 Weeks
+
+```{r}
+#Data frame for Tennessee total that goes back four weeks
+#Plot for Tennessee
+colors = c('Tennessee Data' = '#002D65', 'Moving Average' = '#CC0000')
+ggplot(total_delta, aes(x=DATE)) + 
+  geom_col(aes(y=(CASES_NEW), fill= 'Tennessee Data'),size=.5)+
+  geom_line(aes(y=ma((CASES_NEW)) , color = 'Moving Average' ),size = 1,linetype='dashed')+
+  labs(x='', y='New Cases')+
+  theme(legend.title = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line.x=element_blank(), 
+        axis.line.y.left = element_blank(), 
+        axis.text=element_text(face='bold'),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position = c(.9,1),
+        legend.justification = c(.8,.8),
+        legend.direction = 'horizontal')+
+  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
+  scale_color_manual(values = colors)+
+  scale_fill_manual(values = colors)
+```
+
+### New Cases in Shelby County
+```{r}
+colors = c('Davidson County' = '#002D65', 'Moving Average' = '#CC0000')
+ggplot(tn_delta[which(tn_delta$COUNTY=='Davidson'),], aes(x=DATE)) + 
+  geom_col(aes(y=(CASES_NEW), fill= 'Davidson County'),size=.5)+
+  geom_line(aes(y=ma((CASES_NEW)) , color = 'Moving Average' ),size = 1,linetype='dashed')+
+  labs(x='', y='New Cases')+
+  theme(legend.title = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line.x=element_blank(), 
+        axis.line.y.left = element_blank(), 
+        axis.text=element_text(face='bold'),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position = 'none')+
+  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
+  scale_color_manual(values = colors)+
+  scale_fill_manual(values = colors)
+```
+
+### New Cases in Davidson County
+```{r}
+#Moving Average for Davidson County
+colors = c('Davidson County' = '#002D65', 'Moving Average' = '#CC0000')
+ggplot(tn_delta[which(tn_delta$COUNTY=='Davidson'),], aes(x=DATE)) + 
+  geom_col(aes(y=(CASES_NEW), fill= 'Davidson County'),size=.5)+
+  geom_line(aes(y=ma((CASES_NEW)) , color = 'Moving Average' ),size = 1,linetype='dashed')+
+  labs(x='', y='New Cases')+
+  theme(legend.title = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line.x=element_blank(), 
+        axis.line.y.left = element_blank(), 
+        axis.text=element_text(face='bold'),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position = 'none')+
+  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
+  scale_color_manual(values = colors)+
+  scale_fill_manual(values = colors)
+```
+
+
 
 Data Visualizatons by Demographics
-==================================
+=====================================
 
 Column {data-width=350, data-height=450}
 ---------------------------
@@ -720,7 +789,7 @@ The sole intention of this Coronavirus dashboard is to provide a visual overview
 
 Data is acquired from the [New York Times Coronavirus Data](https://github.com/nytimes/covid-19-data), the [Tennessee State Data Center](https://myutk.maps.arcgis.com/home/group.html?id=c98fc99308dd43fb98146d3cf21fc31c&q=tags%3A%22COVID-19%22&view=list&focus=files#content), and the [Tennessee Department of Health](https://www.tn.gov/health/cedep/ncov.html)
 
-Last updated: `r max(tn$date) %>% format('%m-%d')`. This dashboard will not be updated from May 21st - May 26th.
+Last updated: `r max(tn$date) %>% format('%m-%d')`.
 
 Population data acquired from the [US Census](https://data.census.gov/cedsci/table?q=Tennessee%20race%20demographics&g=0400000US47&tid=ACSDP1Y2018.DP05&hidePreview=true).
 
