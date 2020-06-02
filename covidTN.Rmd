@@ -499,9 +499,8 @@ ggplot(total_delta, aes(x=DATE)) +
         axis.ticks = element_blank(),
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
-        legend.position = c(0,1),
-        legend.direction = 'horizontal',
-        legend.justification = c(-0.1,.8))+
+        legend.position = 'top',
+        legend.direction = 'horizontal')+
   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
   scale_color_manual(values = colors)
 ```
@@ -555,45 +554,6 @@ bscols(widths=c(3,NA),
 )
 ```
 
-
-<!-- ### Change of New Cases in Shelby County -->
-<!-- ```{r} -->
-<!-- #With moving average for Shelby County: -->
-<!-- colors = c('Shelby County' = '#002D65', 'Moving Average' = '#CC0000') -->
-<!-- ggplot(tn_delta[which(tn_delta$COUNTY=='Shelby'),], aes(x=DATE)) +  -->
-<!--   geom_line(aes(y=(RATE_CHG_1DAY*100), color= 'Shelby County'),size=1)+ -->
-<!--   geom_line(aes(y=ma((RATE_CHG_1DAY*100)) , color = 'Moving Average' ),size = 1,linetype='dashed')+ -->
-<!--   labs(x='', y='Change in Cases (%)')+ -->
-<!--   theme(legend.title = element_blank(),  -->
-<!--         panel.background = element_blank(),  -->
-<!--         axis.line = element_blank(), -->
-<!--         axis.ticks = element_blank(), -->
-<!--         axis.text=element_text(face='bold'), -->
-<!--         axis.text.x = element_text(angle=45, hjust=1), -->
-<!--         legend.position = 'none')+ -->
-<!--   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+ -->
-<!--   scale_color_manual(values = colors) -->
-<!-- ``` -->
-
-<!-- ### Change of New Cases in Davidson County -->
-<!-- ```{r} -->
-<!-- #Moving Average for Davidson County -->
-<!-- colors = c('Davidson County' = '#002D65', 'Moving Average' = '#CC0000') -->
-<!-- ggplot(tn_delta[which(tn_delta$COUNTY=='Davidson'),], aes(x=DATE)) +  -->
-<!--   geom_line(aes(y=(RATE_CHG_1DAY*100), color= 'Davidson County'),size=1)+ -->
-<!--   geom_line(aes(y=ma((RATE_CHG_1DAY*100)) , color = 'Moving Average' ),size = 1,linetype='dashed')+ -->
-<!--   labs(x='', y='Change in Cases (%)')+ -->
-<!--   theme(legend.title = element_blank(),  -->
-<!--         panel.background = element_blank(),  -->
-<!--         axis.line = element_blank(), -->
-<!--         axis.ticks = element_blank(), -->
-<!--         axis.text=element_text(face='bold'), -->
-<!--         axis.text.x = element_text(angle=45, hjust=1), -->
-<!--         legend.position = 'none')+ -->
-<!--   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+ -->
-<!--   scale_color_manual(values = colors) -->
-<!-- ``` -->
-
 Column {data-height=500}
 ----------------------------------------------------------------------
 
@@ -613,8 +573,7 @@ ggplot(total_delta, aes(x=DATE)) +
         axis.line.y.left = element_blank(), 
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
-        legend.position = c(.9,1),
-        legend.justification = c(.8,.8),
+       legend.position = 'top',
         legend.direction = 'horizontal')+
   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
   scale_color_manual(values = colors)+
@@ -663,48 +622,6 @@ bscols(widths=c(3,NA),
          highlight(opacityDim = 1)
        )
 ```
-
-
-<!-- ### New Cases in Shelby County -->
-<!-- ```{r} -->
-<!-- colors = c('Shelby County' = '#002D65', 'Moving Average' = '#CC0000') -->
-<!-- ggplot(tn_delta[which(tn_delta$COUNTY=='Shelby'),], aes(x=DATE)) +  -->
-<!--   geom_col(aes(y=(CASES_NEW), fill= 'Shelby County'),size=.5)+ -->
-<!--   geom_line(aes(y=ma((CASES_NEW)) , color = 'Moving Average' ),size = 1,linetype='dashed')+ -->
-<!--   labs(x='', y='New Cases')+ -->
-<!--   theme(legend.title = element_blank(),  -->
-<!--         panel.background = element_blank(),  -->
-<!--         axis.line.x=element_blank(),  -->
-<!--         axis.line.y.left = element_blank(),  -->
-<!--         axis.text=element_text(face='bold'), -->
-<!--         axis.text.x = element_text(angle=45, hjust=1), -->
-<!--         legend.position = 'none')+ -->
-<!--   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+ -->
-<!--   scale_color_manual(values = colors)+ -->
-<!--   scale_fill_manual(values = colors) -->
-<!-- ``` -->
-
-<!-- ### New Cases in Davidson County -->
-<!-- ```{r} -->
-<!-- #Moving Average for Davidson County -->
-<!-- colors = c('Davidson County' = '#002D65', 'Moving Average' = '#CC0000') -->
-<!-- ggplot(tn_delta[which(tn_delta$COUNTY=='Davidson'),], aes(x=DATE)) +  -->
-<!--   geom_col(aes(y=(CASES_NEW), fill= 'Davidson County'),size=.5)+ -->
-<!--   geom_line(aes(y=ma((CASES_NEW)) , color = 'Moving Average' ),size = 1,linetype='dashed')+ -->
-<!--   labs(x='', y='New Cases')+ -->
-<!--   theme(legend.title = element_blank(),  -->
-<!--         panel.background = element_blank(),  -->
-<!--         axis.line.x=element_blank(),  -->
-<!--         axis.line.y.left = element_blank(),  -->
-<!--         axis.text=element_text(face='bold'), -->
-<!--         axis.text.x = element_text(angle=45, hjust=1), -->
-<!--         legend.position = 'none')+ -->
-<!--   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+ -->
-<!--   scale_color_manual(values = colors)+ -->
-<!--   scale_fill_manual(values = colors) -->
-<!-- ``` -->
-
-
 
 Data Visualizatons by Demographics
 =====================================
