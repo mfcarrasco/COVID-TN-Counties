@@ -31,12 +31,12 @@ library(tidyverse)
 library(dplyr)
 
 #Acquire Data####
-#Load NY Times Github data###
+#Load NY Times Github data containing all US Counties###
 nyt_path = 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv'
 
-counties = read_csv(url(nyt_path)) #Contains all counties in US.
+counties = read_csv(url(nyt_path))
 
-#Separate State
+#Separate Tennessee
 tn = counties[ which(counties$state =='Tennessee'),]
 tn = tn[which(tn$date < '2020-03-31'),] #The Tennessee data from the new source has data starting March 31
 
@@ -251,8 +251,8 @@ ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
         axis.ticks = element_blank(),
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
-        legend.position = c(0,.9),
-        legend.justification = c(-0.1,.8))+
+        legend.position ='top',
+        legend.box = 'horizontal')+
   scale_color_brewer(palette = 'Spectral',direction=-1)
 ```
 
@@ -293,8 +293,8 @@ ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
         axis.ticks = element_blank(),
         axis.text=element_text(face='bold'),
         axis.text.x = element_text(angle=45, hjust=1),
-        legend.position = c(0,.9),
-        legend.justification = c(-0.1,.8))+
+        legend.position ='top',
+        legend.box = 'horizontal')+
   scale_color_brewer(palette = 'Spectral',direction=-1)+
   scale_y_log10(breaks=scales::trans_breaks('log10', function(x) 10^x))
 
@@ -336,7 +336,18 @@ fig <- plot_ly() %>%
     center=list(lon= -86.7816, lat=36.1627))) %>%
   colorbar(title = "Cases per 10,000") 
 fig
+```
 
+### Cases rate {.mobile}
+```{r}
+#Create mobile-friendly map
+
+plot_usmap(include = 'TN',
+           regions = 'counties',
+           data = tn_geo,
+           values = 'cases_per_tenk') +
+  scale_fill_viridis(name = 'Cases per 10K')+
+  theme(legend.position = 'top')
 ```
 
 ### Case numbers by county
@@ -432,7 +443,7 @@ ggplot(tn_cases,aes(y=reorder(County, Count, sum), x= Count, fill = Cases))+
               legend.position = c(.75,.2),
               legend.box.just = 'left')+
   scale_fill_manual(values = c(Death = '#CC0000', Positive = '#002D65', 'Negative' = 'grey')) +
-  scale_x_continuous(labels = ks,breaks = seq(min(tn_cases$Count), max(tn_cases$Count)*1.5, by=5000))
+  scale_x_continuous(labels = ks,breaks = seq(min(tn_cases$Count), max(tn_cases$Count)*1.5, by=20000))
 ```
 
 Column {data-height=500}
