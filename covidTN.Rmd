@@ -350,7 +350,7 @@ plot_usmap(include = 'TN',
   theme(legend.position = 'top')
 ```
 
-### Case numbers by county
+### Case numbers by county {.no-mobile}
 ```{r}
 tn_daily[,2:5] %>%
   DT::datatable(rownames = FALSE,
