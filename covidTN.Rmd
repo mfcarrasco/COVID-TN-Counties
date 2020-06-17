@@ -220,7 +220,7 @@ tn_top = tn[ tn$county %in% tn_top,]
 
 t_line = tn_pop_line =ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
-  scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%b %d')+
+  scale_x_date(expand = c(0,0), date_breaks = '2 week', date_labels = '%b %d')+
   scale_y_continuous(labels = ks)+
   labs(x='', y='Cases')+
   theme(legend.position = 'none', 
@@ -241,7 +241,7 @@ tn_top = tn[ tn$county %in% tn_top,]
 
 ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
-  scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%m-%d')+
+  scale_x_date(expand = c(0,0), date_breaks = '2 week', date_labels = '%m-%d')+
   scale_y_continuous(labels = ks)+
   labs(x='', y='Cases')+
   theme(legend.title = element_blank(), 
@@ -263,7 +263,7 @@ tn_top = tn[ tn$county %in% tn_top,]
 
 logplot = ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
-  scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%b %d')+
+  scale_x_date(expand = c(0,0), date_breaks = '2 week', date_labels = '%b %d')+
   labs(x='', y='Cases')+
   theme(legend.title = element_blank(), 
         panel.background = element_blank(), 
@@ -284,7 +284,7 @@ tn_top = tn[ tn$county %in% tn_top,]
 
 ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
   geom_line(size=1)+
-  scale_x_date(expand = c(0,0), date_breaks = '1 week', date_labels = '%b %d')+
+  scale_x_date(expand = c(0,0), date_breaks = '2 week', date_labels = '%b %d')+
   labs(x='', y='Cases')+
   theme(legend.title = element_blank(), 
         panel.background = element_blank(), 
@@ -444,182 +444,190 @@ ggplot(tn_cases,aes(y=reorder(County, Count, sum), x= Count, fill = Cases))+
   scale_x_continuous(labels = ks,breaks = seq(min(tn_cases$Count), max(tn_cases$Count)*1.5, by=20000))
 ```
 
-<!-- Column {data-height=500} -->
-<!-- ---------------------------------------------------------------------- -->
+Column {data-height=500}
+----------------------------------------------------------------------
 
-<!-- ### Change of Total Cases in Tennessee - 4 Weeks -->
+### Change of Total Cases in Tennessee - 4 Weeks
 
-<!-- ```{r} -->
-<!-- #Moving Average function -->
-<!-- ma = function(x, n=7){ -->
-<!--   tsobject = stats::filter(x,  -->
-<!--                 rep(1/n, n),  -->
-<!--                 sides = 2) -->
-<!--   as.numeric(tsobject)} -->
-<!-- #Data frame for Tennessee by county that goes back four weeks -->
-<!-- tn_delta =  readxl::read_excel('TN_COVID19_COUNTYDaily.xlsx',sheet=1) %>% -->
-<!--   select(DATE:RATE_CHG_1DAY,RECOV_TOT:ACTIVE_NEW) %>% -->
-<!--   mutate(DATE = as.Date(DATE)) %>% -->
-<!--   mutate(RATE_CHG_1DAY = RATE_CHG_1DAY*100) %>% -->
-<!--   filter(DATE >= (Sys.Date()-28))%>% -->
-<!--   filter(COUNTY != 'Balance', COUNTY != 'Probable') %>% -->
-<!--   mutate(COUNTY = ifelse(COUNTY== 'Dekalb', -->
-<!--                          'DeKalb',  -->
-<!--                          COUNTY)) %>% -->
-<!--   mutate(COUNTY = as.factor(ifelse(COUNTY == 'Non-Tennessee Resident', -->
-<!--                        "Out of TN",  -->
-<!--                        ifelse(COUNTY == 'Out of State',  -->
-<!--                               'Out of TN',  -->
-<!--                               COUNTY)))) -->
+```{r}
+#Moving Average function
+ma = function(x, n=7){
+  tsobject = stats::filter(x,
+                           rep(1/n, n),
+                           sides = 2)
+  as.numeric(tsobject)}
+#Data frame for Tennessee by county that goes back four weeks
+tn_delta =  readxl::read_excel('TN_COVID19_COUNTYDaily.xlsx',sheet=1) %>%
+  select(DATE:CASES_NEW,RECOV_TOT:ACTIVE_NEW) %>%
+  mutate(DATE = as.Date(DATE)) %>%
+  #filter(DATE >= (Sys.Date()-28))%>%
+  mutate(COUNTY = ifelse(COUNTY== 'Dekalb',
+                         'DeKalb',
+                         COUNTY)) %>%
+  mutate(COUNTY = as.factor(ifelse(COUNTY == 'Non-Tennessee Resident',
+                                   "Out of TN",
+                                   ifelse(COUNTY == 'Out of State',
+                                          'Out of TN',
+                                          COUNTY))))
 
-<!-- #Data frame for Tennessee total that goes back four weeks -->
+#Data frame for Tennessee total that goes back four weeks
 
-<!-- total_delta = tn_delta %>% -->
-<!--   group_by(DATE) %>% -->
-<!--   summarise(CASES = sum(CASES_TOT, na.rm= T),  -->
-<!--             ACTIVE = sum(ACTIVE_TOT,na.rm= T),  -->
-<!--             DEATHS = sum(DEATHS_TOT,na.rm= T),  -->
-<!--             RECOV = sum(RECOV_TOT, na.rm=T), -->
-<!--             CASES_NEW = sum(CASES_NEW, na.rm=T)) %>% -->
-<!--   mutate(PREV_CASES = lag(CASES, order_by= DATE)) %>% -->
-<!--   mutate(RATE_CHG_1DAY = ((CASES-PREV_CASES)/PREV_CASES)*100) %>% -->
-<!--   mutate(RATE_CHG_1DAY= ifelse(is.finite(RATE_CHG_1DAY),RATE_CHG_1DAY,0)) -->
+total_delta = tn_delta %>%
+  group_by(DATE) %>%
+  summarise(CASES = sum(CASES_TOT, na.rm= T),
+            ACTIVE = sum(ACTIVE_TOT,na.rm= T),
+            DEATHS = sum(DEATHS_TOT,na.rm= T),
+            RECOV = sum(RECOV_TOT, na.rm=T),
+            CASES_NEW = sum(CASES_NEW, na.rm=T)) %>%
+  mutate(PREV_CASES = lag(CASES, order_by= DATE)) %>%
+  mutate(RATE_CHG_1DAY = ((CASES-PREV_CASES)/PREV_CASES)*100) %>%
+  mutate(RATE_CHG_1DAY= ifelse(is.finite(RATE_CHG_1DAY),RATE_CHG_1DAY,0)) %>%
+  mutate(MOV_AVG = tibble(RATE_CHG_1DAY) %>% ma)%>%
+  mutate(MOV_AVG_CASES = tibble(CASES_NEW) %>% ma)%>%
+  filter(DATE >= (Sys.Date()-28))
 
-<!-- #Plot for Tennessee -->
-<!-- colors = c('Tennessee Data' = '#002D65', 'Moving Average' = '#CC0000') -->
-<!-- ggplot(total_delta, aes(x=DATE)) +  -->
-<!--   geom_line(aes(y=RATE_CHG_1DAY, color= 'Tennessee Data'),size=1)+ -->
-<!--   geom_line(aes(y=ma(RATE_CHG_1DAY), color = 'Moving Average' ),size = 1,linetype='dashed')+ -->
-<!--   labs(x='', y='Change in Cases (%)')+ -->
-<!--   theme(legend.title = element_blank(),  -->
-<!--         panel.background = element_blank(),  -->
-<!--         axis.line = element_blank(), -->
-<!--         axis.ticks = element_blank(), -->
-<!--         axis.text=element_text(face='bold'), -->
-<!--         axis.text.x = element_text(angle=45, hjust=1), -->
-<!--         legend.position = 'top', -->
-<!--         legend.direction = 'horizontal')+ -->
-<!--   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+ -->
-<!--   scale_color_manual(values = colors) -->
-<!-- ``` -->
+##Plot for Tennessee
+colors = c('Tennessee Data' = '#002D65', 'Moving Average' = '#CC0000')
+ggplot(total_delta, aes(x=DATE)) +
+  geom_line(aes(y=RATE_CHG_1DAY, color= 'Tennessee Data'),size=1)+
+  geom_line(aes(y=MOV_AVG, color = 'Moving Average' ),size = 1,linetype='dashed')+
+  labs(x='', y='Change in Cases (%)')+
+  theme(legend.title = element_blank(),
+        panel.background = element_blank(),
+        axis.line = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text=element_text(face='bold'),
+        axis.text.x = element_text(angle=45, hjust=1),
+        legend.position = 'top',
+        legend.direction = 'horizontal')+
+  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
+  scale_color_manual(values = colors)
+```
 
-<!-- ### Change of Total Cases in Selected County {.no-mobile} -->
-<!-- ```{r} -->
-<!-- library(crosstalk) -->
-<!-- library(dplyr) -->
-<!-- library(plotly) -->
+### Change of Total Cases in Selected County {.no-mobile}
+```{r}
+library(crosstalk)
+library(dplyr)
+library(plotly)
 
-<!-- #Add a moving average column to the dataframe -->
-<!-- mov_avg = tn_delta %>% -->
-<!--   select(DATE,COUNTY, RATE_CHG_1DAY) %>% -->
-<!--   group_by(COUNTY) %>% -->
-<!--   mutate(MOV_AVG = tibble(RATE_CHG_1DAY) %>% ma) -->
+#Add a moving average column to the dataframe
+mov_avg = tn_delta %>%
+  group_by(COUNTY) %>%
+  mutate(PREV_CASES = lag(CASES_TOT, order_by= DATE)) %>%
+  mutate(RATE_CHG_1DAY = ((CASES_TOT-PREV_CASES)/PREV_CASES)*100) %>%
+  mutate(RATE_CHG_1DAY= ifelse(is.finite(RATE_CHG_1DAY),RATE_CHG_1DAY,0)) %>%
+  select(DATE,COUNTY, RATE_CHG_1DAY) %>%
+  mutate(MOV_AVG = tibble(RATE_CHG_1DAY) %>% ma) %>%
+  filter(DATE >= (Sys.Date()-28))
 
-<!-- #Interested in filtering so that people can select the appropriate county from mov avg -->
+#Interested in filtering so that people can select the appropriate county from mov avg
 
-<!-- shared_movavg = SharedData$new(mov_avg) -->
-<!-- bscols(widths=c(3,NA), -->
-<!--        list( -->
-<!--   filter_select('county', 'Type a County', shared_movavg, ~mov_avg$COUNTY)), -->
-<!--   plot_ly(shared_movavg,  -->
-<!--           x = ~DATE, -->
-<!--           y = ~RATE_CHG_1DAY, -->
-<!--           name = 'County', -->
-<!--           type = 'scatter', -->
-<!--           mode = 'lines',  -->
-<!--           line = list( -->
-<!--             color = '#002D65')) %>% -->
-<!--     add_trace(y = ~MOV_AVG, -->
-<!--               name='Moving Average', -->
-<!--               type = 'scatter', -->
-<!--               mode = 'lines', -->
-<!--               line = list( -->
-<!--                 color = '#CC0000')) %>% -->
-<!--     layout(showlegend = F, -->
-<!--       yaxis = list( -->
-<!--       title= 'Change in Cases (%)', -->
-<!--       zeroline = FALSE,  -->
-<!--       showline = F,  -->
-<!--       showticklabels = T,  -->
-<!--       showgrid = F), -->
-<!--       xaxis = list(showgrid = FALSE,  -->
-<!--                    showlilnee = FALSE,  -->
-<!--                    showticklabels = TRUE, -->
-<!--                    tickfont =list(size=10), -->
-<!--                    title = '', -->
-<!--                    tickformat = '%b %d')) %>% -->
-<!--     highlight(opacityDim = 1) -->
-<!-- ) -->
-<!-- ``` -->
+shared_movavg = SharedData$new(mov_avg)
+bscols(widths=c(3,NA),
+       list(
+         filter_select('county', 'Type a County', shared_movavg, ~mov_avg$COUNTY)),
+       plot_ly(shared_movavg,
+               x = ~DATE,
+               y = ~RATE_CHG_1DAY,
+               name = 'County',
+               type = 'scatter',
+               mode = 'lines',
+               line = list(
+                 color = '#002D65')) %>%
+         add_trace(y = ~MOV_AVG,
+                   name='Moving Average',
+                   type = 'scatter',
+                   mode = 'lines',
+                   line = list(
+                     color = '#CC0000')) %>%
+         layout(showlegend = F,
+                yaxis = list(
+                  title= 'Change in Cases (%)',
+                  zeroline = FALSE,
+                  showline = F,
+                  showticklabels = T,
+                  showgrid = F),
+                xaxis = list(showgrid = FALSE,
+                             showlilnee = FALSE,
+                             showticklabels = TRUE,
+                             tickfont =list(size=10),
+                             title = '',
+                             tickformat = '%b %d')) %>%
+         highlight(opacityDim = 1)
+)
+```
 
-<!-- Column {data-height=500} -->
-<!-- ---------------------------------------------------------------------- -->
+Column {data-height=500}
+----------------------------------------------------------------------
 
-<!-- ### New Cases in Tennessee - 4 Weeks -->
+### New Cases in Tennessee - 4 Weeks
 
-<!-- ```{r} -->
-<!-- #Data frame for Tennessee total that goes back four weeks -->
-<!-- #Plot for Tennessee -->
-<!-- colors = c('Tennessee Data' = '#002D65', 'Moving Average' = '#CC0000') -->
-<!-- ggplot(total_delta, aes(x=DATE)) + -->
-<!--   geom_col(aes(y=(CASES_NEW), fill= 'Tennessee Data'),size=.5)+ -->
-<!--   geom_line(aes(y=ma((CASES_NEW)) , color = 'Moving Average' ),size = 1,linetype='dashed')+ -->
-<!--   labs(x='', y='New Cases')+ -->
-<!--   theme(legend.title = element_blank(), -->
-<!--         panel.background = element_blank(), -->
-<!--         axis.line.x=element_blank(), -->
-<!--         axis.line.y.left = element_blank(), -->
-<!--         axis.text=element_text(face='bold'), -->
-<!--         axis.text.x = element_text(angle=45, hjust=1), -->
-<!--        legend.position = 'top', -->
-<!--         legend.direction = 'horizontal')+ -->
-<!--   scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+ -->
-<!--   scale_color_manual(values = colors)+ -->
-<!--   scale_fill_manual(values = colors) -->
-<!-- ``` -->
+```{r}
+#Data frame for Tennessee total that goes back four weeks
+#Plot for Tennessee
+colors = c('Tennessee Data' = '#002D65', 'Moving Average' = '#CC0000')
+ggplot(total_delta, aes(x=DATE)) +
+  geom_col(aes(y=(CASES_NEW), fill= 'Tennessee Data'),size=.5)+
+  geom_line(aes(y=MOV_AVG_CASES , color = 'Moving Average' ),size = 1,linetype='dashed')+
+  labs(x='', y='New Cases')+
+  theme(legend.title = element_blank(),
+        panel.background = element_blank(),
+        axis.line.x=element_blank(),
+        axis.line.y.left = element_blank(),
+        axis.text=element_text(face='bold'),
+        axis.text.x = element_text(angle=45, hjust=1),
+       legend.position = 'top',
+        legend.direction = 'horizontal')+
+  scale_x_date(expand = c(0,0), date_breaks = '2 day', date_labels = '%b %d')+
+  scale_color_manual(values = colors)+
+  scale_fill_manual(values = colors)
+```
 
-<!-- ### New Cases in Selected County {.no-mobile} -->
-<!-- ```{r} -->
-<!-- #Moving average for new cases -->
-<!-- mov_avg = tn_delta %>% -->
-<!--   select(DATE,COUNTY, CASES_NEW) %>% -->
-<!--   group_by(COUNTY) %>% -->
-<!--   mutate(MOV_AVG = tibble(CASES_NEW) %>% ma) -->
+### New Cases in Selected County {.no-mobile}
+```{r}
+#Moving average for new cases
+mov_avg = tn_delta %>%
+  select(DATE,COUNTY, CASES_NEW) %>%
+  group_by(COUNTY) %>%
+  mutate(MOV_AVG = tibble(CASES_NEW) %>% ma) %>%
+  filter(DATE >= (Sys.Date()-28))
 
-<!-- #Interested in filtering so that people can select the appropriate county from mov avg -->
 
-<!-- shared_movavg = SharedData$new(mov_avg) -->
-<!-- bscols(widths=c(3,NA), -->
-<!--        list( -->
-<!--          filter_select('county', 'Type a County', shared_movavg, ~mov_avg$COUNTY)), -->
-<!--        plot_ly(shared_movavg, x = ~DATE) %>% -->
-<!--          add_trace(y = ~CASES_NEW, -->
-<!--                name = 'County', -->
-<!--                type = 'bar', -->
-<!--                marker = list( -->
-<!--                  color = '#002D65')) %>% -->
-<!--          add_trace(y = ~MOV_AVG, -->
-<!--                    name='Moving Average', -->
-<!--                    type = 'scatter', -->
-<!--                    mode = 'lines', -->
-<!--                    line = list( -->
-<!--                      color = '#CC0000')) %>% -->
-<!--          layout(showlegend = F, -->
-<!--                 yaxis = list( -->
-<!--                   title= 'New Cases', -->
-<!--                   zeroline = FALSE,  -->
-<!--                   showline = F,  -->
-<!--                   showticklabels = T,  -->
-<!--                   showgrid = F), -->
-<!--                 xaxis = list(showgrid = FALSE,  -->
-<!--                              showlilnee = FALSE,  -->
-<!--                              showticklabels = TRUE, -->
-<!--                              tickfont =list(size=10), -->
-<!--                              title = '', -->
-<!--                              tickformat = '%b %d'))%>% -->
-<!--          highlight(opacityDim = 1) -->
-<!--        ) -->
-<!-- ``` -->
+
+#Interested in filtering so that people can select the appropriate county from mov avg
+
+shared_movavg = SharedData$new(mov_avg)
+bscols(widths=c(3,NA),
+       list(
+         filter_select('county', 'Type a County', shared_movavg, ~mov_avg$COUNTY)),
+       plot_ly(shared_movavg, x = ~DATE) %>%
+         add_trace(y = ~CASES_NEW,
+               name = 'County',
+               type = 'bar',
+               marker = list(
+                 color = '#002D65')) %>%
+         add_trace(y = ~MOV_AVG,
+                   name='Moving Average',
+                   type = 'scatter',
+                   mode = 'lines',
+                   line = list(
+                     color = '#CC0000')) %>%
+         layout(showlegend = F,
+                yaxis = list(
+                  title= 'New Cases',
+                  zeroline = FALSE,
+                  showline = F,
+                  showticklabels = T,
+                  showgrid = F),
+                xaxis = list(showgrid = FALSE,
+                             showlilnee = FALSE,
+                             showticklabels = TRUE,
+                             tickfont =list(size=10),
+                             title = '',
+                             tickformat = '%b %d'))%>%
+         highlight(opacityDim = 1)
+       )
+```
 
 Data Visualizatons by Demographics
 =====================================
