@@ -116,7 +116,7 @@ rm(list=ls()[!ls() %in% c('tn', 'tn_daily')])
 
 
 #Value Box Calculations####
-tn_ext =  readxl::read_excel('TN_COVID19_COUNTYDaily.xlsx',sheet=2) %>%
+tn_ext =  readxl::read_excel('TN_COVID19_COUNTYDaily.xlsx',sheet=1) %>%
   top_n(1,DATE) %>%
   filter(COUNTY != 'Balance') 
 
@@ -301,13 +301,20 @@ ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
 
 Row {data-width=400}
 -------------------------
-### Cases rate 
+### Active Cases Rate 
 ```{r}
+#Cases rate by ACTIVE cases
+library(tidyverse)
 library(usmap)
 library(viridis)
-tn_geo =tn %>% group_by(county) %>% top_n(1,date)
-tn_geo = tn_geo[!(tn_geo$county =='Unknown'),]
-tn_geo$fips =fips(state = 'TN', county=tn_geo$county)
+tn_geo = tn_ext %>% 
+  filter(COUNTY != 'Out of State' & COUNTY !='Pending') %>%
+  left_join(tn[,c('county','date', 'population')], by=c(COUNTY = 'county')) %>%
+  mutate(fips = fips(state = 'TN', county = COUNTY)) %>%
+  top_n(1,date) %>%
+  mutate(ACTIVE_PER_TENK = (ACTIVE_TOT/population)*10^4) %>%
+  select(COUNTY, ACTIVE_TOT, fips, ACTIVE_PER_TENK)
+
 
 library(rjson)
 url = 'https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json'
@@ -317,14 +324,14 @@ json_file <- rjson::fromJSON(file=url)
 
 fig <- plot_ly() %>% 
   add_trace(
-    text = paste(tn_geo$county,' County'),
+    text = paste(tn_geo$COUNTY,' County'),
     hoverinfo = 'text',
     type='choroplethmapbox',
     geojson= json_file,
     locations=tn_geo$fips,
-    z = tn_geo$cases_per_tenk,
+    z = tn_geo$ACTIVE_PER_TENK,
     zmin=0,
-    zmax = round(max(tn_geo$cases_per_tenk),-3),
+    zmax = round(max(tn_geo$ACTIVE_PER_TENK),-3),
     colorscale='Viridis',
     marker=list(line=list(
       width=0),
@@ -337,23 +344,22 @@ fig <- plot_ly() %>%
 fig
 ```
 
-### Cases rate {.mobile}
+### Active Cases Rate {.mobile}
 ```{r}
 #Create mobile-friendly map
-
 plot_usmap(include = 'TN',
            regions = 'counties',
            data = tn_geo,
-           values = 'cases_per_tenk') +
+           values = 'ACTIVE_PER_TENK') +
   scale_fill_viridis(name = 'Cases per 10K')+
   theme(legend.position = 'top')
 ```
 
 ### Case numbers by county {.no-mobile}
 ```{r}
-tn_daily[,2:5] %>%
+tn_ext[,c('COUNTY','CASES_CONFIRMED','ACTIVE_TOT', 'RECOV_TOT', 'HOSPITALIZED_TOT','DEATHS_TOT')] %>%
   DT::datatable(rownames = FALSE,
-                colnames = c('County', 'Confirmed', 'Negative', 'Death'),
+                colnames = c('County','Confirmed', 'Active','Recovered', 'Hospitalized', 'Death'),
                 options = list(pageLength = 10))
 ```
 
