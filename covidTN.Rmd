@@ -301,7 +301,7 @@ ggplot(data=tn_top, aes(x=date, y=cases, color=county))+
 
 Row {data-width=400}
 -------------------------
-### Active Cases Rate 
+### Active Cases Rate by 10K Population
 ```{r}
 #Cases rate by ACTIVE cases
 library(tidyverse)
@@ -344,7 +344,7 @@ fig <- plot_ly() %>%
 fig
 ```
 
-### Active Cases Rate {.mobile}
+### Active Cases Rate by 10K Population {.mobile}
 ```{r}
 #Create mobile-friendly map
 plot_usmap(include = 'TN',
@@ -357,9 +357,11 @@ plot_usmap(include = 'TN',
 
 ### Case numbers by county {.no-mobile}
 ```{r}
-tn_ext[,c('COUNTY','CASES_CONFIRMED','ACTIVE_TOT', 'RECOV_TOT', 'HOSPITALIZED_TOT','DEATHS_TOT')] %>%
+tn_ext %>%
+  mutate(CASE_RATE = paste0(round(((TEST_POS/TEST_TOT)*100),1),'%')) %>%
+  select('COUNTY','CASES_CONFIRMED','CASE_RATE','ACTIVE_TOT', 'RECOV_TOT', 'HOSPITALIZED_TOT','DEATHS_TOT') %>%
   DT::datatable(rownames = FALSE,
-                colnames = c('County','Confirmed', 'Active','Recovered', 'Hospitalized', 'Death'),
+                colnames = c('County','Confirmed','Positive Case Rate', 'Active','Recovered', 'Hospitalized', 'Death' ),
                 options = list(pageLength = 10))
 ```
 
@@ -474,7 +476,8 @@ tn_delta =  readxl::read_excel('TN_COVID19_COUNTYDaily.xlsx',sheet=1) %>%
                                    "Out of TN",
                                    ifelse(COUNTY == 'Out of State',
                                           'Out of TN',
-                                          COUNTY))))
+                                          COUNTY)))) %>%
+  filter(is.na(COUNTY) != TRUE) #Remove the blank total row they had.
 
 #Data frame for Tennessee total that goes back four weeks
 
