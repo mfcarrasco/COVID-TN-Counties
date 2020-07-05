@@ -368,10 +368,10 @@ tn_ext %>%
 Column {data-width=350, data-height=470}
 -----------------------------------------------------------------------
 
-### Positive cases by counties with more than 50 cases {.no-mobile}
+### Positive cases by counties with more than 150 cases {.no-mobile}
 
 ```{r}
-tn_cases = tn_daily[which(tn_daily$Positive >50 & 
+tn_cases = tn_daily[which(tn_daily$Positive >150 & 
                             tn_daily$County != 'Pending'  &
                             tn_daily$County != 'Out of TN'), 
                     c('County', 'Positive','Negative','Death')] 
@@ -395,10 +395,10 @@ plot_ly(data=tn_cases,
 
 
 
-### All outcomes by counties with more than 50 cases
+### All outcomes by counties with more than 150 cases
 
 ```{r}
-tn_cases = tn_daily[which(tn_daily$Positive > 50 & 
+tn_cases = tn_daily[which(tn_daily$Positive > 150 & 
                             tn_daily$County != 'Pending'  &
                             tn_daily$County != 'Out of TN'), c('County', 'Positive','Negative','Death')] #Remove where there are no cases
 
@@ -428,10 +428,10 @@ plot_ly(data=tn_cases,
                  hovermode = 'compare')
 ```
 
-### All outcomes by counties with more than 50 cases {.mobile}
+### All outcomes by counties with more than 150 cases {.mobile}
 
 ```{r}
-tn_cases = tn_daily[which(tn_daily$Positive > 50 & 
+tn_cases = tn_daily[which(tn_daily$Positive > 150 & 
                             tn_daily$County != 'Pending'  &
                             tn_daily$County != 'Out of TN'), 
                     c('County', 'Death','Negative','Positive')] %>%
