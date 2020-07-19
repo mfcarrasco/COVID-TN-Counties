@@ -828,7 +828,7 @@ The sole intention of this Coronavirus dashboard is to provide a visual overview
 
 **Data**
 
-Data is acquired from the [New York Times Coronavirus Data](https://github.com/nytimes/covid-19-data), the [Tennessee State Data Center](https://myutk.maps.arcgis.com/home/group.html?id=c98fc99308dd43fb98146d3cf21fc31c&q=tags%3A%22COVID-19%22&view=list&focus=files#content), and the [Tennessee Department of Health](https://www.tn.gov/health/cedep/ncov.html)
+Data is acquired from the [New York Times Coronavirus Data](https://github.com/nytimes/covid-19-data), the [Tennessee State Data Center](https://myutk.maps.arcgis.com/home/group.html?id=c98fc99308dd43fb98146d3cf21fc31c&q=tags%3A%22COVID-19%22&view=list&focus=files#content), and the [Tennessee Department of Health](https://www.tn.gov/health/cedep/ncov.html). 
 
 Last updated: `r max(tn$date) %>% format('%m-%d')`.
 
