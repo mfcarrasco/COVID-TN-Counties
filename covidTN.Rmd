@@ -133,7 +133,7 @@ total_cases = sum(tn_ext$TEST_POS)
 total_negative = sum(tn_ext$TEST_NEG)
 total_death = sum(tn_ext$DEATHS_TOT)
 
-total_recov = sum(tn_ext$RECOV_TOT)
+total_recov = sum(tn_ext$TOTAL_INACTIVE_RECOVERED)
 active_cases = total_cases - total_death - total_recov #sum(tn_ext$ACTIVE_TOT)
 
 total_tests = total_cases + total_negative
