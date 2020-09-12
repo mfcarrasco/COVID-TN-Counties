@@ -359,7 +359,7 @@ plot_usmap(include = 'TN',
 ```{r}
 tn_ext %>%
   mutate(CASE_RATE = paste0(round(((TEST_POS/TEST_TOT)*100),1),'%')) %>%
-  select('COUNTY','CASES_CONFIRMED','CASE_RATE','ACTIVE_TOT', 'RECOV_TOT', 'HOSPITALIZED_TOT','DEATHS_TOT') %>%
+  select('COUNTY','CASES_CONFIRMED','CASE_RATE','ACTIVE_TOT', 'TOTAL_INACTIVE_RECOVERED', 'HOSPITALIZED_TOT','DEATHS_TOT') %>%
   DT::datatable(rownames = FALSE,
                 colnames = c('County','Confirmed','Positive Case Rate', 'Active','Recovered', 'Hospitalized', 'Death' ),
                 options = list(pageLength = 10))
