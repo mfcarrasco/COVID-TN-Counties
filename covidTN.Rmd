@@ -700,10 +700,10 @@ sex_census = readxl::read_excel('census_demographics.xlsx',sheet='Sex') %>%
 
 #Get TN Cases Data
 tndh_demo = 'https://www.tn.gov/content/dam/tn/health/documents/cedep/novel-coronavirus/datasets/Public-Dataset-RaceEthSex.XLSX'
-
-download.file(tndh_demo,'TNDeptHealth_Demographics.xlsx') 
-
-tndh_demo =  readxl::read_excel('TNDeptHealth_Demographics.xlsx',sheet=1) %>% 
+download.file(tndh_demo,'Public-Dataset-RaceEthSex-2.xlsx') 
+#download.file(tndh_demo,'TNDeptHealth_Demographics.xlsx') 
+#tndh_demo =  readxl::read_excel('TNDeptHealth_Demographics.xlsx',sheet=1)
+tndh_demo =  readxl::read_excel('Public-Dataset-RaceEthSex-2.xlsx',sheet=1) %>% 
   top_n(1,Date) %>%
   group_split(Category)
 
